@@ -71,10 +71,7 @@ async function syncDriveData() {
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
     
-    // Star Tier Migration
-    if (playerJsonData.class1RegularStars === undefined) {
-        playerJsonData.class1RegularStars = playerJsonData.class1Stars || 0;
-    }
+    if (playerJsonData.class1RegularStars === undefined) playerJsonData.class1RegularStars = playerJsonData.class1Stars || 0;
     if (playerJsonData.class1BigStars === undefined) playerJsonData.class1BigStars = 0;
     if (playerJsonData.class1GiantStars === undefined) playerJsonData.class1GiantStars = 0;
     
@@ -329,7 +326,6 @@ function resizeCanvas() {
     let w = container.clientWidth;
     let h = container.clientHeight;
     
-    // Safety check just in case layout isn't fully calculated yet
     if (w === 0) {
         w = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.85) - 20;
         h = w;
@@ -342,7 +338,6 @@ function resizeCanvas() {
 }
 
 function getActiveRuneTypes() {
-    // Adjusted difficulty progression array
     const typesPerRound = [4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 9];
     const index = Math.min(playerJsonData.class1Round - 1, typesPerRound.length - 1);
     let numTypes = typesPerRound[index];
@@ -404,41 +399,49 @@ function updateUI() {
     document.getElementById("uiTime").innerText = state.timeLeft;
     document.getElementById("uiTotalPoints").innerText = `${playerJsonData.class1Points} / ${MAX_POINTS}`;
     
-    const bBtn = document.getElementById("bombBtn");
-    
-    if ((state.giantStars > 0 || state.bigStars > 0 || state.regularStars > 0) && !state.inputLocked) { 
-        bBtn.disabled = false; 
-        if (state.giantStars > 0) {
-            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Giant Star ( ${state.giantStars} )`;
-            bBtn.style.color = '#ff66ff'; 
-        } else if (state.bigStars > 0) {
-            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Big Star ( ${state.bigStars} )`;
-            bBtn.style.color = '#66ffff'; 
-        } else {
-            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Place Star ( ${state.regularStars} )`;
-            bBtn.style.color = '#fff';
-        }
-    } else { 
-        bBtn.disabled = true; 
-        state.bombMode = false; 
-        bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Place Star ( 0 )`;
-        bBtn.style.color = '#e3d2b9';
+    document.getElementById("countReg").innerText = state.regularStars;
+    document.getElementById("countBig").innerText = state.bigStars;
+    document.getElementById("countGiant").innerText = state.giantStars;
+
+    const bReg = document.getElementById("btnStarReg");
+    const bBig = document.getElementById("btnStarBig");
+    const bGiant = document.getElementById("btnStarGiant");
+
+    bReg.disabled = (state.regularStars <= 0 || state.inputLocked);
+    bBig.disabled = (state.bigStars <= 0 || state.inputLocked);
+    bGiant.disabled = (state.giantStars <= 0 || state.inputLocked);
+
+    bReg.classList.remove("active");
+    bBig.classList.remove("active");
+    bGiant.classList.remove("active");
+
+    if (state.bombMode) {
+        if (state.bombTier === 'STAR_REGULAR') bReg.classList.add("active");
+        if (state.bombTier === 'STAR_BIG') bBig.classList.add("active");
+        if (state.bombTier === 'STAR_GIANT') bGiant.classList.add("active");
     }
-    
-    if (state.bombMode) bBtn.classList.add("active");
-    else bBtn.classList.remove("active");
 }
 
-document.getElementById("bombBtn").addEventListener("click", () => {
-    if ((state.giantStars > 0 || state.bigStars > 0 || state.regularStars > 0) && !state.inputLocked) {
-        state.bombMode = !state.bombMode;
-        if (state.bombMode) {
-            if (state.giantStars > 0) state.bombTier = 'STAR_GIANT';
-            else if (state.bigStars > 0) state.bombTier = 'STAR_BIG';
-            else state.bombTier = 'STAR_REGULAR';
-        }
-        updateUI();
+function toggleBombMode(tier) {
+    if (state.inputLocked) return;
+    if (state.bombMode && state.bombTier === tier) {
+        state.bombMode = false;
+        state.bombTier = null;
+    } else {
+        state.bombMode = true;
+        state.bombTier = tier;
     }
+    updateUI();
+}
+
+document.getElementById("btnStarReg").addEventListener("click", () => {
+    if (state.regularStars > 0) toggleBombMode('STAR_REGULAR');
+});
+document.getElementById("btnStarBig").addEventListener("click", () => {
+    if (state.bigStars > 0) toggleBombMode('STAR_BIG');
+});
+document.getElementById("btnStarGiant").addEventListener("click", () => {
+    if (state.giantStars > 0) toggleBombMode('STAR_GIANT');
 });
 
 function awardStar() {
@@ -461,7 +464,6 @@ function startRound() {
     
     switchScreen('game');
     
-    // Give browser 1 frame to snap CSS layout into place so height reads correctly
     requestAnimationFrame(() => {
         resizeCanvas(); 
         playBGM();
@@ -471,11 +473,11 @@ function startRound() {
         state.playing = true;
         state.inputLocked = false;
         state.bombMode = false;
+        state.bombTier = null;
         state.collectedRunes = {};
         particles = [];
         floatingTexts = [];
         
-        // Fully clear animation memory to prevent ghost flares
         state.selection = [];
         state.dissolvingCells = [];
         state.dissolveTimer = 0;
@@ -589,7 +591,7 @@ function createBlastParticle(x, y, tier) {
     };
 }
 
-// --- GLOBAL FAE SPARKLES (Everywhere on Screen) ---
+// --- GLOBAL FAE SPARKLES ---
 const fxCanvas = document.getElementById("fxCanvas");
 const fxCtx = fxCanvas.getContext("2d");
 let globalSparkles = [];
@@ -658,6 +660,7 @@ function setupInput() {
             else state.regularStars--;
             
             state.bombMode = false;
+            state.bombTier = null;
             updateUI();
             return;
         }
