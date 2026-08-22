@@ -70,16 +70,21 @@ async function syncDriveData() {
     if (playerJsonData.class1Points === undefined) playerJsonData.class1Points = 0;
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
+    if (playerJsonData.class1Stars === undefined) playerJsonData.class1Stars = 0;
     
     if (playerJsonData.schoolProgress === undefined) {
         playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
+    
+    state.stars = playerJsonData.class1Stars;
 }
 
 async function saveDriveData() {
     if (!dataFileId) return;
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
+    playerJsonData.class1Stars = state.stars;
+    
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${gDriveToken}`, 'Content-Type': 'application/json' },
@@ -112,6 +117,7 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
+        playerJsonData.class1Stars = 0;
         state.stars = 0;
         await saveDriveData();
         pauseBGM();
@@ -141,6 +147,7 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
+        playerJsonData.class1Stars = 0;
         state.stars = 0;
         await saveDriveData();
         pauseBGM();
@@ -313,7 +320,8 @@ function resizeCanvas() {
 }
 
 function getActiveRuneTypes() {
-    const typesPerRound = [4, 5, 6, 7, 8, 9];
+    // Adjusted difficulty progression array
+    const typesPerRound = [4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 9];
     const index = Math.min(playerJsonData.class1Round - 1, typesPerRound.length - 1);
     let numTypes = typesPerRound[index];
     return RUNE_NAMES.slice(0, numTypes);
