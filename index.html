@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Class 1: Runic-Fally</title>
-    <!-- Cache bust version 4 for animation updates -->
-    <link rel="stylesheet" href="css/runic-fally.css?v=4">
+    <!-- Cache bust version 5 for layout fix and global sparkles -->
+    <link rel="stylesheet" href="css/runic-fally.css?v=5">
 </head>
 <body>
+
+    <!-- GLOBAL FX CANVAS (For Sparkles Everywhere) -->
+    <canvas id="fxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999;"></canvas>
 
     <!-- LOADING SCREEN -->
     <div id="loadingScreen">
@@ -142,6 +145,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/runic-fally.js?v=4"></script>
+    <script type="module" src="js/runic-fally.js?v=5"></script>
 </body>
 </html>
