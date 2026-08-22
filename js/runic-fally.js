@@ -71,7 +71,6 @@ async function syncDriveData() {
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
     
-    // Ensure school progress structure exists
     if (playerJsonData.schoolProgress === undefined) {
         playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
@@ -80,7 +79,6 @@ async function syncDriveData() {
 async function saveDriveData() {
     if (!dataFileId) return;
     
-    // Maintain internal representation for the game only.
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
 
@@ -162,10 +160,7 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
     document.getElementById("loadingMsg").innerText = "Saving Graduation & Adding 100 EXP...";
     switchScreen('loading');
     
-    // Mark class as permanently passed
     playerJsonData.schoolProgress.class1 = true;
-    
-    // Award the 100 Global EXP directly to the Character Card
     playerJsonData.exp = (playerJsonData.exp || 0) + 100;
     
     await saveDriveData();
