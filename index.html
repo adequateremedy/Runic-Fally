@@ -34,22 +34,32 @@
                     <li><strong>Connect:</strong> Drag to link 3 or more matching stones.</li>
                     <li><strong>Score:</strong> Longer chains earn more points (3=1pt, 4=5pts, 5=10pts, 6+=20pts).</li>
                     <li><strong>Bombs:</strong> Match 4+ to earn a Star Bomb. Tap 'Place Star', swap a stone, and tap it to blast the area!</li>
-                    <li><strong>Goal:</strong> Accumulate 2,000 Total Points across all rounds to earn an A+ and 100 EXP.</li>
+                    <li><strong>Goal:</strong> Accumulate 2,000 Total Points across all rounds to pass the class.</li>
                 </ul>
             </div>
             <button id="startClassBtn">Start Class</button>
         </div>
 
-        <!-- Shown if > 0 points -->
+        <!-- Shown if > 0 points (and not graduated) -->
         <div id="returningPlayerPanel" class="hidden">
             <div class="instructions-panel" style="text-align: center;">
                 <h3>Welcome Back!</h3>
                 <p>Your previous progress was securely loaded from Google Drive.</p>
                 <h2 style="margin: 15px 0 5px 0;">Current Grade: <span id="welcomeGrade">F</span></h2>
-                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0;">Class Progress: <span id="welcomePercent">0</span>%</p>
+                <p style="font-size: 0.85rem; opacity: 0.8; margin-top: 0;">Class Progress: <span id="welcomePercent">0</span>%</p>
                 <p style="color: #d1c5b4; font-size: 0.85rem; margin-top: 15px;">(Reminder: 2,000 points are required to pass with an A+)</p>
             </div>
             <button id="continueClassBtn">Continue Class</button>
+        </div>
+
+        <!-- Shown if Already Graduated -->
+        <div id="graduatedPanel" class="hidden">
+            <div class="instructions-panel" style="text-align: center;">
+                <h3>Class Completed</h3>
+                <p>You have successfully graduated from Runic-Fally.</p>
+                <h2 style="color:#4caf50; margin: 15px 0 5px 0;">Grade: A+</h2>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0;">100 EXP Claimed</p>
+            </div>
         </div>
         
         <button id="hubRedirectBtn" style="margin-top: 20px; background: transparent; border: none; font-size: 0.8rem; text-decoration: underline;">Return to Hub</button>
@@ -108,13 +118,17 @@
         </div>
     </div>
 
-    <!-- CLASS COMPLETE MODAL -->
+    <!-- CLASS GRADUATE MODAL -->
     <div id="completeModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h1 style="color:#e3d2b9;">Class Completed!</h1>
+            <h1 style="color:#e3d2b9; margin-top: 0;">Class Graduate!</h1>
             <p>You have mastered Runic-Fally with an A+ Grade!</p>
-            <p style="color:#7F522B; font-weight:bold;">100 EXP Awarded</p>
-            <button id="completeReturnHubBtn" style="width: 100%; margin-top: 20px;">Return to Hub</button>
+            <p style="color:#7F522B; font-weight:bold; font-size: 1.2rem;">2,000 Points Reached</p>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 25px;">Choose to lock in your score and claim your 100 EXP, or retake the class from the beginning.</p>
+            <div class="modal-buttons">
+                <button id="saveGraduateBtn" style="background:#4caf50; border-color:#4caf50; color:#fff;">Save & Return to Hub (+100 EXP)</button>
+                <button id="retakeGraduateBtn" class="danger-btn">Retake Class</button>
+            </div>
         </div>
     </div>
 
