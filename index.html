@@ -142,6 +142,7 @@
     let gDriveToken = sessionStorage.getItem("gDriveToken") || null;
     let dataFileId = null;
     let playerJsonData = {};
+    let engineStarted = false; // Safety flag to prevent double-loading
 
     const screens = {
         login: document.getElementById('loginScreen'),
@@ -290,15 +291,17 @@
     }
 
     function initGameEngine() {
+        if (engineStarted) return; // Prevent double load triggers
+        engineStarted = true;
+
         document.getElementById("loadingMsg").innerText = "Loading magical assets...";
         document.getElementById("progressBarContainer").classList.remove("hidden");
         document.getElementById("loadingPercent").classList.remove("hidden");
         
         preloadImages(() => {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
             setupInput();
             startRound();
+            window.addEventListener('resize', resizeCanvas);
         });
     }
 
@@ -394,7 +397,9 @@
             return;
         }
 
-        switchScreen('game');
+        switchScreen('game'); // Unhide container BEFORE calculating dimensions
+        resizeCanvas(); // Set dimensions correctly now that it is visible
+
         state.round = playerJsonData.class1Round;
         state.score = 0;
         state.timeLeft = 60;
@@ -597,6 +602,7 @@
     // --- DRAWING ---
     function drawGrid() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!grid || grid.length === 0) return; // Failsafe for 0x0 resize bounds
 
         // Draw connections
         if (state.selection.length > 1) {
