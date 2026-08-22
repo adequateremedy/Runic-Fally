@@ -71,7 +71,6 @@ async function syncDriveData() {
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
     
-    // Ensure school progress structure exists
     if (playerJsonData.schoolProgress === undefined) {
         playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
@@ -79,11 +78,8 @@ async function syncDriveData() {
 
 async function saveDriveData() {
     if (!dataFileId) return;
-    
-    // Maintain internal representation for the game only.
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
-
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${gDriveToken}`, 'Content-Type': 'application/json' },
@@ -117,11 +113,9 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
         await saveDriveData();
-        
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
         currentTrackIndex = 0;
-
         screens.tally.classList.add('hidden');
         startRound();
     }
@@ -140,7 +134,6 @@ document.getElementById("continueClassBtn").addEventListener("click", () => {
     startRound();
 });
 
-// GRADUATION BUTTONS
 document.getElementById("retakeGraduateBtn").addEventListener("click", async () => {
     const confirmRetake = confirm("Are you sure you want to retake the class? This will erase your 2,000 points and return you to Round 1.");
     if (confirmRetake) {
@@ -148,11 +141,9 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
         await saveDriveData();
-        
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
         currentTrackIndex = 0;
-
         screens.complete.classList.add('hidden');
         startRound();
     }
@@ -161,19 +152,14 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
 document.getElementById("saveGraduateBtn").addEventListener("click", async () => {
     document.getElementById("loadingMsg").innerText = "Saving Graduation & Adding 100 EXP...";
     switchScreen('loading');
-    
-    // Mark class as permanently passed
     playerJsonData.schoolProgress.class1 = true;
-    
-    // Award the 100 Global EXP directly to the Character Card
     playerJsonData.exp = (playerJsonData.exp || 0) + 100;
-    
     await saveDriveData();
     window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
 });
 
 // ==========================================
-// GAME ENGINE
+// GAME ENGINE & ANIMATIONS
 // ==========================================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -188,15 +174,24 @@ const COLS = 10;
 const ROWS = 10;
 let tileSize = 0;
 let grid = [];
+
+// Animation State
+let particles = [];
+let floatingTexts = [];
+let shakeFrames = 0;
+
 let state = {
     roundScore: 0,
     stars: 0,
     timeLeft: 60,
     playing: false,
+    inputLocked: false,
     dragging: false,
     selection: [],
     bombMode: false,
-    collectedRunes: {} 
+    collectedRunes: {},
+    dissolveTimer: 0,
+    dissolvingCells: []
 };
 
 let timerInterval;
@@ -213,7 +208,6 @@ function preloadImages(callback) {
         updateProgress();
         if(imagesLoaded === totalImages) callback(); 
     };
-
     const onError = (e) => {
         const msg = document.getElementById("loadingMsg");
         const brokenFile = e.target.src ? e.target.src.split('/').pop() : "unknown file";
@@ -254,13 +248,11 @@ function preloadImages(callback) {
 function calculateGrade(points) {
     let percent = Math.floor((points / MAX_POINTS) * 100);
     if (percent > 100) percent = 100;
-    
     let grade = "F";
     if (percent >= 90) grade = "A";
     else if (percent >= 70) grade = "B";
     else if (percent >= 50) grade = "C";
     else if (percent >= 30) grade = "D";
-
     return { grade, percent };
 }
 
@@ -278,7 +270,6 @@ function initAssetLoading() {
 
 function showWelcomeScreen() {
     switchScreen('welcome');
-    
     if (playerJsonData.schoolProgress && playerJsonData.schoolProgress.class1 === true) {
         document.getElementById('newPlayerPanel').classList.add('hidden');
         document.getElementById('returningPlayerPanel').classList.add('hidden');
@@ -287,11 +278,9 @@ function showWelcomeScreen() {
         document.getElementById('newPlayerPanel').classList.add('hidden');
         document.getElementById('graduatedPanel').classList.add('hidden');
         document.getElementById('returningPlayerPanel').classList.remove('hidden');
-        
         const result = calculateGrade(playerJsonData.class1Points);
         document.getElementById("welcomeGrade").innerText = result.grade;
         document.getElementById("welcomePercent").innerText = result.percent;
-        
         const gradeColor = result.grade === "A" ? "#4caf50" : 
                            result.grade === "B" ? "#8bc34a" : 
                            result.grade === "C" ? "#ffeb3b" : 
@@ -325,7 +314,7 @@ function generateGrid() {
     for (let r = 0; r < ROWS; r++) {
         let row = [];
         for (let c = 0; c < COLS; c++) {
-            row.push({ type: activeTypes[Math.floor(Math.random() * activeTypes.length)], yOffset: -canvas.height });
+            row.push({ type: activeTypes[Math.floor(Math.random() * activeTypes.length)], yOffset: -canvas.height, vy: 0 });
         }
         grid.push(row);
     }
@@ -376,7 +365,7 @@ function updateUI() {
     document.getElementById("uiStars").innerText = state.stars;
     
     const bBtn = document.getElementById("bombBtn");
-    if (state.stars > 0) { bBtn.disabled = false; } 
+    if (state.stars > 0 && !state.inputLocked) { bBtn.disabled = false; } 
     else { bBtn.disabled = true; state.bombMode = false; }
     
     if (state.bombMode) bBtn.classList.add("active");
@@ -384,7 +373,7 @@ function updateUI() {
 }
 
 document.getElementById("bombBtn").addEventListener("click", () => {
-    if (state.stars > 0) {
+    if (state.stars > 0 && !state.inputLocked) {
         state.bombMode = !state.bombMode;
         updateUI();
     }
@@ -395,7 +384,6 @@ function startRound() {
         switchScreen('complete');
         return;
     }
-
     switchScreen('game');
     resizeCanvas(); 
     playBGM();
@@ -403,9 +391,12 @@ function startRound() {
     state.roundScore = 0;
     state.timeLeft = 60;
     state.playing = true;
+    state.inputLocked = false;
     state.bombMode = false;
     state.stars = 0;
     state.collectedRunes = {};
+    particles = [];
+    floatingTexts = [];
     RUNE_NAMES.forEach(n => state.collectedRunes[n] = 0);
     
     generateGrid();
@@ -469,24 +460,64 @@ function endRound() {
     }
 }
 
+// --- PARTICLE ENGINES ---
+function createSparkleParticle(x, y) {
+    return {
+        type: 'sparkle',
+        x: x + (Math.random() - 0.5) * 10,
+        y: y + (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.5) * 1.5 + 0.5,
+        size: Math.random() * 2 + 1,
+        life: 20, maxLife: 20
+    };
+}
+
+function createSteamParticle(x, y) {
+    return {
+        type: 'steam',
+        x: x + (Math.random() - 0.5) * 20,
+        y: y + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 1,
+        vy: -Math.random() * 2 - 1, 
+        size: Math.random() * 8 + 4,
+        life: 30, maxLife: 30
+    };
+}
+
+function createBlastParticle(x, y) {
+    let angle = Math.random() * Math.PI * 2;
+    let speed = Math.random() * 6 + 2;
+    let isWhite = Math.random() > 0.5;
+    return {
+        type: 'blast',
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: Math.random() * 3 + 2,
+        color: isWhite ? 'rgba(255,255,255,1)' : 'rgba(255,215,0,1)',
+        life: 25, maxLife: 25
+    };
+}
+
 // --- INTERACTION ---
 function setupInput() {
-    const getGridPos = (e) => {
+    const getExactPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        
-        let x = (clientX - rect.left) * scaleX;
-        let y = (clientY - rect.top) * scaleY;
-        
-        return { c: Math.floor(x / tileSize), r: Math.floor(y / tileSize) };
+        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    };
+
+    const getGridPos = (e) => {
+        const pos = getExactPos(e);
+        return { c: Math.floor(pos.x / tileSize), r: Math.floor(pos.y / tileSize) };
     };
 
     const onStart = (e) => {
-        if (!state.playing) return;
+        if (!state.playing || state.inputLocked) return;
         const { r, c } = getGridPos(e);
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
 
@@ -508,7 +539,14 @@ function setupInput() {
     };
 
     const onMove = (e) => {
-        if (!state.dragging || !state.playing) return;
+        if (!state.dragging || !state.playing || state.inputLocked) return;
+        
+        // Sparkle Trail Effect
+        const exactPos = getExactPos(e);
+        for(let i=0; i<2; i++) {
+            particles.push(createSparkleParticle(exactPos.x, exactPos.y));
+        }
+
         const { r, c } = getGridPos(e);
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
 
@@ -531,7 +569,7 @@ function setupInput() {
     };
 
     const onEnd = () => {
-        if (!state.dragging) return;
+        if (!state.dragging || state.inputLocked) return;
         state.dragging = false;
 
         const chainLength = state.selection.length;
@@ -545,16 +583,34 @@ function setupInput() {
             let type = grid[state.selection[0].r][state.selection[0].c].type;
             state.roundScore += ptsEarned;
             state.collectedRunes[type] += chainLength;
-            
             if (chainLength >= 4) {
                 state.stars++;
             }
 
-            state.selection.forEach(s => { grid[s.r][s.c] = null; });
-            processGravity();
+            // Calculate center for Floating Text
+            let sumR = 0, sumC = 0;
+            state.selection.forEach(s => { sumR += s.r; sumC += s.c; });
+            let avgR = sumR / chainLength;
+            let avgC = sumC / chainLength;
+            floatingTexts.push({ 
+                x: avgC * tileSize + tileSize/2, 
+                y: avgR * tileSize, 
+                text: `+${ptsEarned}`, 
+                life: 60, maxLife: 60 
+            });
+
+            pulseScoreboard();
+
+            // Initiate Match Flare & Dissolve Sequence
+            state.inputLocked = true;
+            state.dissolveTimer = 25; 
+            state.dissolvingCells = [...state.selection];
+            
+        } else {
+            // Did not form a valid chain, just clear selection
+            state.selection = [];
+            updateUI();
         }
-        state.selection = [];
-        updateUI();
     };
 
     canvas.addEventListener('mousedown', onStart);
@@ -566,21 +622,50 @@ function setupInput() {
     window.addEventListener('touchend', onEnd);
 }
 
-function explodeStar(r, c) {
-    grid[r][c] = null;
-    if(r-1 >= 0) { if(grid[r-1][c]) addExplodedScore(grid[r-1][c].type); grid[r-1][c] = null; }
-    if(r+1 < ROWS) { if(grid[r+1][c]) addExplodedScore(grid[r+1][c].type); grid[r+1][c] = null; }
-    if(c-1 >= 0) { if(grid[r][c-1]) addExplodedScore(grid[r][c-1].type); grid[r][c-1] = null; }
-    if(c+1 < COLS) { if(grid[r][c+1]) addExplodedScore(grid[r][c+1].type); grid[r][c+1] = null; }
-    processGravity();
-    updateUI();
+function pulseScoreboard() {
+    const scoreEl = document.getElementById("uiScore");
+    scoreEl.classList.remove("pulse-score");
+    void scoreEl.offsetWidth; // Trigger reflow
+    scoreEl.classList.add("pulse-score");
 }
 
-function addExplodedScore(type) {
-    if(type && type !== 'STAR') {
-        state.roundScore += 1; 
-        state.collectedRunes[type]++;
+function explodeStar(r, c) {
+    shakeFrames = 15; // Trigger Screen Shake
+    
+    let cx = c * tileSize + tileSize/2;
+    let cy = r * tileSize + tileSize/2;
+    
+    // Blast Particles
+    for(let i=0; i<40; i++) {
+        particles.push(createBlastParticle(cx, cy));
     }
+
+    let affected = [{r, c}];
+    if(r-1 >= 0 && grid[r-1][c]) affected.push({r: r-1, c});
+    if(r+1 < ROWS && grid[r+1][c]) affected.push({r: r+1, c});
+    if(c-1 >= 0 && grid[r][c-1]) affected.push({r, c: c-1});
+    if(c+1 < COLS && grid[r][c+1]) affected.push({r, c: c+1});
+
+    let ptsEarned = 0;
+    affected.forEach(s => {
+        let cell = grid[s.r][s.c];
+        if(cell && cell.type !== 'STAR') {
+            ptsEarned += 1;
+            state.collectedRunes[cell.type]++;
+        }
+    });
+
+    if (ptsEarned > 0) {
+        floatingTexts.push({ x: cx, y: cy, text: `+${ptsEarned}`, life: 60, maxLife: 60 });
+        state.roundScore += ptsEarned;
+        pulseScoreboard();
+    }
+
+    // Fast dissolve sequence for explosions
+    state.inputLocked = true;
+    state.dissolveTimer = 10;
+    state.dissolvingCells = affected;
+    updateUI();
 }
 
 function processGravity() {
@@ -596,17 +681,91 @@ function processGravity() {
             }
         }
         for (let i = 0; i < emptySpaces; i++) {
-            grid[i][c] = { type: activeTypes[Math.floor(Math.random() * activeTypes.length)], yOffset: -tileSize * (emptySpaces - i) };
+            grid[i][c] = { 
+                type: activeTypes[Math.floor(Math.random() * activeTypes.length)], 
+                yOffset: -canvas.height - (i * tileSize),
+                vy: 0
+            };
         }
     }
     ensurePossibleMatch();
 }
 
-// --- DRAWING ---
+function updatePhysics() {
+    // 1. Process Dissolve Timers (Flare -> Steam)
+    if (state.inputLocked && state.dissolveTimer > 0) {
+        state.dissolveTimer--;
+        if (state.dissolveTimer <= 0) {
+            state.dissolvingCells.forEach(s => {
+                let cx = s.c * tileSize + tileSize/2;
+                let cy = s.r * tileSize + tileSize/2;
+                for(let i=0; i<4; i++) {
+                    particles.push(createSteamParticle(cx, cy));
+                }
+                grid[s.r][s.c] = null;
+            });
+            state.dissolvingCells = [];
+            state.selection = [];
+            processGravity();
+            updateUI();
+            state.inputLocked = false;
+        }
+    }
+
+    // 2. Heavy Stone Bounce (Gravity)
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            let cell = grid[r][c];
+            if (cell && cell.yOffset < 0) {
+                cell.vy = (cell.vy || 0) + 1.2; 
+                cell.yOffset += cell.vy;
+                if (cell.yOffset >= 0) {
+                    if (cell.vy > 4) {
+                        cell.vy = -cell.vy * 0.35; // Bounce magnitude
+                        cell.yOffset = -1; 
+                    } else {
+                        cell.yOffset = 0;
+                        cell.vy = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Update Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.type === 'steam') p.size += 0.4; // Steam expands
+        p.life--;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+    
+    // 4. Update Floating Texts
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ft.y -= 1.5; 
+        ft.life--;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    if (shakeFrames > 0) shakeFrames--;
+}
+
 function drawGrid() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!grid || grid.length === 0) return; 
+    
+    ctx.save();
+    
+    // Screen Shake Effect
+    if (shakeFrames > 0) {
+        let dx = (Math.random() - 0.5) * 12;
+        let dy = (Math.random() - 0.5) * 12;
+        ctx.translate(dx, dy);
+    }
 
+    // Draw active selection chain lines
     if (state.selection.length > 1) {
         ctx.beginPath();
         ctx.lineWidth = 6;
@@ -628,32 +787,77 @@ function drawGrid() {
             let cell = grid[r][c];
             if (!cell) continue;
 
-            if (cell.yOffset < 0) {
-                cell.yOffset += 8; 
-                if (cell.yOffset > 0) cell.yOffset = 0;
-            }
-
             let x = c * tileSize;
             let y = r * tileSize + (cell.yOffset || 0);
 
+            let isDissolving = state.dissolvingCells.find(s => s.r === r && s.c === c);
             let isSelected = state.selection.find(s => s.r === r && s.c === c);
             let img;
 
             if (cell.type === 'STAR') {
                 img = ASSETS.star;
             } else {
-                img = isSelected ? ASSETS.glow[cell.type] : ASSETS.normal[cell.type];
+                img = (isSelected || isDissolving) ? ASSETS.glow[cell.type] : ASSETS.normal[cell.type];
             }
 
             if (img && img.complete) {
                 ctx.drawImage(img, x + padding, y + padding, tileSize - padding*2, tileSize - padding*2);
+                
+                // Draw Match Flare overlay if dissolving
+                if (isDissolving) {
+                    let alpha = state.dissolveTimer / 25; 
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+                    ctx.beginPath();
+                    ctx.arc(x + tileSize/2, y + tileSize/2, (tileSize - padding*2)/2, 0, Math.PI*2);
+                    ctx.fill();
+                }
             }
         }
     }
+
+    // Draw Particles
+    particles.forEach(p => {
+        if (p.type === 'sparkle') {
+            let alpha = p.life / p.maxLife;
+            ctx.fillStyle = `rgba(255, 255, 200, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+        } else if (p.type === 'steam') {
+            let alpha = (p.life / p.maxLife) * 0.6;
+            ctx.fillStyle = `rgba(220, 220, 220, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+        } else if (p.type === 'blast') {
+            let alpha = p.life / p.maxLife;
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+    });
+
+    // Draw Floating Text
+    floatingTexts.forEach(ft => {
+        let alpha = ft.life / ft.maxLife;
+        ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+        ctx.font = "bold 26px Georgia";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+        ctx.shadowBlur = 6;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.shadowBlur = 0; // reset
+    });
+
+    ctx.restore();
 }
 
 function gameLoop() {
-    if(state.playing) {
+    if (state.playing) {
+        updatePhysics();
         drawGrid();
         requestAnimationFrame(gameLoop);
     }
