@@ -393,8 +393,13 @@ function setupInput() {
         const rect = canvas.getBoundingClientRect();
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        let x = clientX - rect.left;
-        let y = clientY - rect.top;
+        
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        let x = (clientX - rect.left) * scaleX;
+        let y = (clientY - rect.top) * scaleY;
+        
         return { c: Math.floor(x / tileSize), r: Math.floor(y / tileSize) };
     };
 
