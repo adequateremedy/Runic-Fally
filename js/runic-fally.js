@@ -70,20 +70,31 @@ async function syncDriveData() {
     if (playerJsonData.class1Points === undefined) playerJsonData.class1Points = 0;
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
-    if (playerJsonData.class1Stars === undefined) playerJsonData.class1Stars = 0;
+    
+    // Star Tier Migration
+    if (playerJsonData.class1RegularStars === undefined) {
+        playerJsonData.class1RegularStars = playerJsonData.class1Stars || 0;
+    }
+    if (playerJsonData.class1BigStars === undefined) playerJsonData.class1BigStars = 0;
+    if (playerJsonData.class1GiantStars === undefined) playerJsonData.class1GiantStars = 0;
     
     if (playerJsonData.schoolProgress === undefined) {
         playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
     
-    state.stars = playerJsonData.class1Stars;
+    state.regularStars = playerJsonData.class1RegularStars;
+    state.bigStars = playerJsonData.class1BigStars;
+    state.giantStars = playerJsonData.class1GiantStars;
 }
 
 async function saveDriveData() {
     if (!dataFileId) return;
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
-    playerJsonData.class1Stars = state.stars;
+    
+    playerJsonData.class1RegularStars = state.regularStars;
+    playerJsonData.class1BigStars = state.bigStars;
+    playerJsonData.class1GiantStars = state.giantStars;
     
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
         method: 'PATCH',
@@ -117,8 +128,12 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
-        playerJsonData.class1Stars = 0;
-        state.stars = 0;
+        playerJsonData.class1RegularStars = 0;
+        playerJsonData.class1BigStars = 0;
+        playerJsonData.class1GiantStars = 0;
+        state.regularStars = 0;
+        state.bigStars = 0;
+        state.giantStars = 0;
         await saveDriveData();
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
@@ -147,8 +162,12 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
-        playerJsonData.class1Stars = 0;
-        state.stars = 0;
+        playerJsonData.class1RegularStars = 0;
+        playerJsonData.class1BigStars = 0;
+        playerJsonData.class1GiantStars = 0;
+        state.regularStars = 0;
+        state.bigStars = 0;
+        state.giantStars = 0;
         await saveDriveData();
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
@@ -191,13 +210,16 @@ let shakeFrames = 0;
 
 let state = {
     roundScore: 0,
-    stars: 0,
+    regularStars: 0,
+    bigStars: 0,
+    giantStars: 0,
     timeLeft: 60,
     playing: false,
     inputLocked: false,
     dragging: false,
     selection: [],
     bombMode: false,
+    bombTier: null,
     collectedRunes: {},
     dissolveTimer: 0,
     dissolvingCells: []
@@ -345,7 +367,7 @@ function ensurePossibleMatch() {
         const activeTypes = getActiveRuneTypes();
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                if (grid[r][c].type !== 'STAR') {
+                if (!grid[r][c].type.startsWith('STAR')) {
                     grid[r][c].type = activeTypes[Math.floor(Math.random() * activeTypes.length)];
                 }
             }
@@ -356,7 +378,7 @@ function ensurePossibleMatch() {
 function hasPossibleMatch() {
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-            if (grid[r][c].type === 'STAR') return true;
+            if (grid[r][c].type.startsWith('STAR')) return true;
             if (dfs(r, c, grid[r][c].type, [], 1)) return true;
         }
     }
@@ -381,22 +403,55 @@ function updateUI() {
     document.getElementById("uiScore").innerText = state.roundScore;
     document.getElementById("uiTime").innerText = state.timeLeft;
     document.getElementById("uiTotalPoints").innerText = `${playerJsonData.class1Points} / ${MAX_POINTS}`;
-    document.getElementById("uiStars").innerText = state.stars;
     
     const bBtn = document.getElementById("bombBtn");
-    if (state.stars > 0 && !state.inputLocked) { bBtn.disabled = false; } 
-    else { bBtn.disabled = true; state.bombMode = false; }
+    
+    if ((state.giantStars > 0 || state.bigStars > 0 || state.regularStars > 0) && !state.inputLocked) { 
+        bBtn.disabled = false; 
+        if (state.giantStars > 0) {
+            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Giant Star ( ${state.giantStars} )`;
+            bBtn.style.color = '#ff66ff'; 
+        } else if (state.bigStars > 0) {
+            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Big Star ( ${state.bigStars} )`;
+            bBtn.style.color = '#66ffff'; 
+        } else {
+            bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Place Star ( ${state.regularStars} )`;
+            bBtn.style.color = '#fff';
+        }
+    } else { 
+        bBtn.disabled = true; 
+        state.bombMode = false; 
+        bBtn.innerHTML = `<img src="assets/Star/Star-Symbol.png" alt="Star"> Place Star ( 0 )`;
+        bBtn.style.color = '#e3d2b9';
+    }
     
     if (state.bombMode) bBtn.classList.add("active");
     else bBtn.classList.remove("active");
 }
 
 document.getElementById("bombBtn").addEventListener("click", () => {
-    if (state.stars > 0 && !state.inputLocked) {
+    if ((state.giantStars > 0 || state.bigStars > 0 || state.regularStars > 0) && !state.inputLocked) {
         state.bombMode = !state.bombMode;
+        if (state.bombMode) {
+            if (state.giantStars > 0) state.bombTier = 'STAR_GIANT';
+            else if (state.bigStars > 0) state.bombTier = 'STAR_BIG';
+            else state.bombTier = 'STAR_REGULAR';
+        }
         updateUI();
     }
 });
+
+function awardStar() {
+    state.regularStars++;
+    if (state.regularStars >= 3) {
+        state.regularStars = 0;
+        state.bigStars++;
+        if (state.bigStars >= 3) {
+            state.bigStars = 0;
+            state.giantStars++;
+        }
+    }
+}
 
 function startRound() {
     if(playerJsonData.class1Points >= MAX_POINTS) {
@@ -420,6 +475,7 @@ function startRound() {
         particles = [];
         floatingTexts = [];
         
+        // Fully clear animation memory to prevent ghost flares
         state.selection = [];
         state.dissolvingCells = [];
         state.dissolveTimer = 0;
@@ -513,17 +569,22 @@ function createSteamParticle(x, y) {
     };
 }
 
-function createBlastParticle(x, y) {
+function createBlastParticle(x, y, tier) {
     let angle = Math.random() * Math.PI * 2;
     let speed = Math.random() * 6 + 2;
     let isWhite = Math.random() > 0.5;
+    
+    let color = isWhite ? 'rgba(255,255,255,1)' : 'rgba(255,215,0,1)';
+    if (tier === 'STAR_BIG') color = isWhite ? 'rgba(200,255,255,1)' : 'rgba(0,255,255,1)';
+    if (tier === 'STAR_GIANT') color = isWhite ? 'rgba(255,150,255,1)' : 'rgba(255,0,255,1)';
+    
     return {
         type: 'blast',
         x: x, y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         size: Math.random() * 3 + 2,
-        color: isWhite ? 'rgba(255,255,255,1)' : 'rgba(255,215,0,1)',
+        color: color,
         life: 25, maxLife: 25
     };
 }
@@ -589,16 +650,20 @@ function setupInput() {
         const { r, c } = getGridPos(e);
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
 
-        if (state.bombMode && grid[r][c].type !== 'STAR') {
-            grid[r][c].type = 'STAR';
-            state.stars--;
+        if (state.bombMode && !grid[r][c].type.startsWith('STAR')) {
+            grid[r][c].type = state.bombTier;
+            
+            if (state.bombTier === 'STAR_GIANT') state.giantStars--;
+            else if (state.bombTier === 'STAR_BIG') state.bigStars--;
+            else state.regularStars--;
+            
             state.bombMode = false;
             updateUI();
             return;
         }
 
-        if (grid[r][c].type === 'STAR') {
-            explodeStar(r, c);
+        if (grid[r][c].type.startsWith('STAR')) {
+            explodeStar(r, c, grid[r][c].type);
             return;
         }
 
@@ -619,7 +684,7 @@ function setupInput() {
         const dc = Math.abs(last.c - c);
         if (dr <= 1 && dc <= 1) {
             const targetType = grid[state.selection[0].r][state.selection[0].c].type;
-            if (grid[r][c].type === targetType && grid[r][c].type !== 'STAR') {
+            if (grid[r][c].type === targetType && !grid[r][c].type.startsWith('STAR')) {
                 const exists = state.selection.findIndex(s => s.r === r && s.c === c);
                 if (exists !== -1) {
                     state.selection = state.selection.slice(0, exists + 1);
@@ -645,8 +710,9 @@ function setupInput() {
             let type = grid[state.selection[0].r][state.selection[0].c].type;
             state.roundScore += ptsEarned;
             state.collectedRunes[type] += chainLength;
+            
             if (chainLength >= 4) {
-                state.stars++;
+                awardStar();
             }
 
             // Calculate center for Floating Text
@@ -691,27 +757,61 @@ function pulseScoreboard() {
     scoreEl.classList.add("pulse-score");
 }
 
-function explodeStar(r, c) {
-    shakeFrames = 15; // Trigger Screen Shake
+function explodeStar(r, c, tier) {
+    let shake = 15;
+    let pCount = 40;
+    let affected = [{r, c}];
+    
+    // Calculate Blast Radius
+    if (tier === 'STAR_REGULAR') {
+        if(r-1 >= 0) affected.push({r: r-1, c});
+        if(r+1 < ROWS) affected.push({r: r+1, c});
+        if(c-1 >= 0) affected.push({r, c: c-1});
+        if(c+1 < COLS) affected.push({r, c: c+1});
+    } else if (tier === 'STAR_BIG') {
+        shake = 25; pCount = 80;
+        for(let dr = -1; dr <= 1; dr++) {
+            for(let dc = -1; dc <= 1; dc++) {
+                let nr = r + dr, nc = c + dc;
+                if(nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) affected.push({r: nr, c: nc});
+            }
+        }
+    } else if (tier === 'STAR_GIANT') {
+        shake = 40; pCount = 150;
+        for(let dr = -2; dr <= 2; dr++) {
+            for(let dc = -2; dc <= 2; dc++) {
+                let nr = r + dr, nc = c + dc;
+                if(nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) affected.push({r: nr, c: nc});
+            }
+        }
+    }
+    
+    shakeFrames = shake;
     
     let cx = c * tileSize + tileSize/2;
     let cy = r * tileSize + tileSize/2;
     
     // Blast Particles
-    for(let i=0; i<40; i++) {
-        particles.push(createBlastParticle(cx, cy));
+    for(let i=0; i<pCount; i++) {
+        particles.push(createBlastParticle(cx, cy, tier));
     }
 
-    let affected = [{r, c}];
-    if(r-1 >= 0 && grid[r-1][c]) affected.push({r: r-1, c});
-    if(r+1 < ROWS && grid[r+1][c]) affected.push({r: r+1, c});
-    if(c-1 >= 0 && grid[r][c-1]) affected.push({r, c: c-1});
-    if(c+1 < COLS && grid[r][c+1]) affected.push({r, c: c+1});
+    // Deduplicate affected cells
+    let uniqueAffected = [];
+    let seen = new Set();
+    affected.forEach(s => {
+        let key = `${s.r},${s.c}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueAffected.push(s);
+        }
+    });
 
     let ptsEarned = 0;
-    affected.forEach(s => {
+    uniqueAffected.forEach(s => {
         let cell = grid[s.r][s.c];
-        if(cell && cell.type !== 'STAR') {
+        // Only harvest standard stones to prevent infinite star chain reactions
+        if(cell && !cell.type.startsWith('STAR')) {
             ptsEarned += 1;
             state.collectedRunes[cell.type]++;
         }
@@ -726,7 +826,7 @@ function explodeStar(r, c) {
     // Fast dissolve sequence for explosions
     state.inputLocked = true;
     state.dissolveTimer = 10;
-    state.dissolvingCells = affected;
+    state.dissolvingCells = uniqueAffected;
     updateUI();
 }
 
@@ -856,7 +956,31 @@ function drawGrid() {
             let isSelected = state.selection.find(s => s.r === r && s.c === c);
             let img;
 
-            if (cell.type === 'STAR') {
+            // Render Custom Star Auras
+            if (cell.type.startsWith('STAR')) {
+                let cx = x + tileSize/2;
+                let cy = y + tileSize/2;
+                let radius = tileSize * 0.4;
+                
+                if (cell.type === 'STAR_BIG') {
+                    let pulse = Math.abs(Math.sin(Date.now() * 0.003)) * 0.5 + 0.5;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius * 1.2 * pulse, 0, Math.PI*2);
+                    ctx.fillStyle = `rgba(0, 255, 255, ${0.4 * pulse})`;
+                    ctx.shadowColor = '#00ffff';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                } else if (cell.type === 'STAR_GIANT') {
+                    let pulse = Math.abs(Math.sin(Date.now() * 0.008)) * 0.5 + 0.5;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius * 1.4 * pulse, 0, Math.PI*2);
+                    ctx.fillStyle = `rgba(255, 0, 255, ${0.6 * pulse})`;
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.shadowBlur = 15;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
                 img = ASSETS.star;
             } else {
                 img = (isSelected || isDissolving) ? ASSETS.glow[cell.type] : ASSETS.normal[cell.type];
