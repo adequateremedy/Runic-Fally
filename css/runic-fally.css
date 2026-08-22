@@ -207,7 +207,7 @@ button:disabled {
 
 #bombBtn.active { 
     background: #7F522B; 
-    color: #fff; 
+    color: #fff !important; 
 }
 
 #canvasContainer { 
