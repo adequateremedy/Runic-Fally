@@ -224,16 +224,45 @@
     let timerInterval;
 
     function preloadImages(callback) {
-        const onLoad = () => { imagesLoaded++; if(imagesLoaded === totalImages) callback(); };
+        const onLoad = () => { 
+            imagesLoaded++; 
+            if(imagesLoaded === totalImages) callback(); 
+        };
+
+        const onError = (e) => {
+            const msg = document.getElementById("loadingMsg");
+            const brokenFile = e.target.src.split('/').pop();
+            msg.innerHTML += `<br><span style="color:#ffb0b0;">Failed to load: ${brokenFile}</span>`;
+            imagesLoaded++; 
+            if(imagesLoaded === totalImages) callback(); 
+        };
 
         RUNE_NAMES.forEach(name => {
-            ASSETS.normal[name] = new Image(); ASSETS.normal[name].src = `assets/Runic-Stones/${name}-Runic-Stone.png`; ASSETS.normal[name].onload = onLoad;
-            ASSETS.glow[name] = new Image(); ASSETS.glow[name].src = `assets/Runic-Stones-Glow/${name}-Runic-Stone-Glow.png`; ASSETS.glow[name].onload = onLoad;
-            ASSETS.cards[name] = new Image(); ASSETS.cards[name].src = `assets/Runic-Stone-Card/${name}-Runic-Stone-Glow-Card.png`; ASSETS.cards[name].onload = onLoad;
+            ASSETS.normal[name] = new Image(); 
+            ASSETS.normal[name].onload = onLoad; 
+            ASSETS.normal[name].onerror = onError;
+            ASSETS.normal[name].src = `assets/Runic-Stones/${name}-Runic-Stone.png`; 
+            
+            ASSETS.glow[name] = new Image(); 
+            ASSETS.glow[name].onload = onLoad; 
+            ASSETS.glow[name].onerror = onError;
+            ASSETS.glow[name].src = `assets/Runic-Stones-Glow/${name}-Runic-Stone-Glow.png`; 
+            
+            ASSETS.cards[name] = new Image(); 
+            ASSETS.cards[name].onload = onLoad; 
+            ASSETS.cards[name].onerror = onError;
+            ASSETS.cards[name].src = `assets/Runic-Stone-Card/${name}-Runic-Stone-Glow-Card.png`; 
         });
 
-        ASSETS.star = new Image(); ASSETS.star.src = `assets/Star/Star-Symbol.png`; ASSETS.star.onload = onLoad;
-        ASSETS.starGlow = new Image(); ASSETS.starGlow.src = `assets/Star/Star-Symbol-Glow.png`; ASSETS.starGlow.onload = onLoad;
+        ASSETS.star = new Image(); 
+        ASSETS.star.onload = onLoad; 
+        ASSETS.star.onerror = onError;
+        ASSETS.star.src = `assets/Star/Star-Symbol.png`; 
+        
+        ASSETS.starGlow = new Image(); 
+        ASSETS.starGlow.onload = onLoad; 
+        ASSETS.starGlow.onerror = onError;
+        ASSETS.starGlow.src = `assets/Star/Star-Symbol-Glow.png`; 
     }
 
     function initGameEngine() {
@@ -583,7 +612,7 @@
                     img = isSelected ? ASSETS.glow[cell.type] : ASSETS.normal[cell.type];
                 }
 
-                if (img) {
+                if (img && img.complete) {
                     ctx.drawImage(img, x + padding, y + padding, tileSize - padding*2, tileSize - padding*2);
                 }
             }
