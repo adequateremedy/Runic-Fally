@@ -70,11 +70,17 @@ async function syncDriveData() {
     if (playerJsonData.class1Points === undefined) playerJsonData.class1Points = 0;
     if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
     if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
+    
+    // Ensure school progress structure exists
+    if (playerJsonData.schoolProgress === undefined) {
+        playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
+    }
 }
 
 async function saveDriveData() {
     if (!dataFileId) return;
     
+    // Maintain internal representation for the game only.
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
 
@@ -91,17 +97,12 @@ onAuthStateChanged(auth, async (user) => {
         await syncDriveData();
         initAssetLoading();
     } else {
-        // If they bypass the Hub and have no token, send them back
         window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
     }
 });
 
 // NAVIGATION BUTTONS
 document.getElementById("returnHubBtn").addEventListener("click", () => {
-    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
-});
-
-document.getElementById("completeReturnHubBtn").addEventListener("click", () => {
     window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
 });
 
@@ -137,6 +138,38 @@ document.getElementById("startClassBtn").addEventListener("click", () => {
 
 document.getElementById("continueClassBtn").addEventListener("click", () => {
     startRound();
+});
+
+// GRADUATION BUTTONS
+document.getElementById("retakeGraduateBtn").addEventListener("click", async () => {
+    const confirmRetake = confirm("Are you sure you want to retake the class? This will erase your 2,000 points and return you to Round 1.");
+    if (confirmRetake) {
+        playerJsonData.class1Points = 0;
+        playerJsonData.class1Round = 1;
+        playerJsonData.class1Exp = 0;
+        await saveDriveData();
+        
+        pauseBGM();
+        BGM_TRACKS[currentTrackIndex].currentTime = 0;
+        currentTrackIndex = 0;
+
+        screens.complete.classList.add('hidden');
+        startRound();
+    }
+});
+
+document.getElementById("saveGraduateBtn").addEventListener("click", async () => {
+    document.getElementById("loadingMsg").innerText = "Saving Graduation & Adding 100 EXP...";
+    switchScreen('loading');
+    
+    // Mark class as permanently passed
+    playerJsonData.schoolProgress.class1 = true;
+    
+    // Award the 100 Global EXP directly to the Character Card
+    playerJsonData.exp = (playerJsonData.exp || 0) + 100;
+    
+    await saveDriveData();
+    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
 });
 
 // ==========================================
@@ -245,8 +278,14 @@ function initAssetLoading() {
 
 function showWelcomeScreen() {
     switchScreen('welcome');
-    if (playerJsonData.class1Points > 0) {
+    
+    if (playerJsonData.schoolProgress && playerJsonData.schoolProgress.class1 === true) {
         document.getElementById('newPlayerPanel').classList.add('hidden');
+        document.getElementById('returningPlayerPanel').classList.add('hidden');
+        document.getElementById('graduatedPanel').classList.remove('hidden');
+    } else if (playerJsonData.class1Points > 0) {
+        document.getElementById('newPlayerPanel').classList.add('hidden');
+        document.getElementById('graduatedPanel').classList.add('hidden');
         document.getElementById('returningPlayerPanel').classList.remove('hidden');
         
         const result = calculateGrade(playerJsonData.class1Points);
@@ -260,6 +299,7 @@ function showWelcomeScreen() {
         document.getElementById("welcomeGrade").style.color = gradeColor;
     } else {
         document.getElementById('returningPlayerPanel').classList.add('hidden');
+        document.getElementById('graduatedPanel').classList.add('hidden');
         document.getElementById('newPlayerPanel').classList.remove('hidden');
     }
 }
@@ -273,8 +313,9 @@ function resizeCanvas() {
 }
 
 function getActiveRuneTypes() {
-    const typesPerRound = [4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9];
-    let numTypes = typesPerRound[Math.min(playerJsonData.class1Round - 1, 10)];
+    const typesPerRound = [4, 5, 6, 7, 8, 9];
+    const index = Math.min(playerJsonData.class1Round - 1, typesPerRound.length - 1);
+    let numTypes = typesPerRound[index];
     return RUNE_NAMES.slice(0, numTypes);
 }
 
