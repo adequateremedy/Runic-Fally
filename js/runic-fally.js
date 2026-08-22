@@ -21,6 +21,29 @@ let engineStarted = false;
 const MAX_POINTS = 2000;
 const POINTS_PER_EXP = 20;
 
+// AUDIO ENGINE
+const BGM_TRACKS = [
+    new Audio('assets/Music/song1.mp3'),
+    new Audio('assets/Music/song2.mp3')
+];
+let currentTrackIndex = 0;
+
+BGM_TRACKS.forEach((track, index) => {
+    track.volume = 0.5; // Smooth background volume
+    track.addEventListener('ended', () => {
+        currentTrackIndex = (index + 1) % BGM_TRACKS.length;
+        BGM_TRACKS[currentTrackIndex].play().catch(e => console.log("Audio play prevented:", e));
+    });
+});
+
+function playBGM() {
+    BGM_TRACKS[currentTrackIndex].play().catch(e => console.log("Audio play prevented:", e));
+}
+
+function pauseBGM() {
+    BGM_TRACKS[currentTrackIndex].pause();
+}
+
 const screens = {
     login: document.getElementById('loginScreen'),
     loading: document.getElementById('loadingScreen'),
@@ -106,6 +129,11 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
         await saveDriveData();
+        
+        pauseBGM();
+        BGM_TRACKS[currentTrackIndex].currentTime = 0;
+        currentTrackIndex = 0;
+
         screens.tally.classList.add('hidden');
         startRound();
     }
@@ -305,6 +333,7 @@ function startRound() {
 
     switchScreen('game');
     resizeCanvas(); 
+    playBGM();
 
     state.roundScore = 0;
     state.timeLeft = 60;
@@ -346,6 +375,7 @@ function calculateGrade(points) {
 function endRound() {
     state.playing = false;
     clearInterval(timerInterval);
+    pauseBGM();
     
     // Add round score to total
     playerJsonData.class1Points += state.roundScore;
