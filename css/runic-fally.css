@@ -139,10 +139,10 @@ button:disabled {
 
 .hidden { display: none !important; }
 
-/* GAME UI (WITH DYNAMIC SCALING FOR BOARD) */
+/* GAME UI */
 #gameUI { 
-    width: 100%; 
-    max-width: min(95vw, 85vh); 
+    width: min(95vw, 85vh); 
+    margin: 0 auto;
     padding: 10px; 
     display: flex; 
     flex-direction: column; 
