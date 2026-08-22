@@ -19,6 +19,18 @@
             border: 1px solid #7F522B; border-radius: 14px; padding: 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); z-index: 100;
         }
+        
+        #progressBarContainer {
+            width: 100%; max-width: 300px; height: 18px; border: 1px solid #7F522B;
+            border-radius: 9px; margin: 15px auto; background: #111; overflow: hidden;
+        }
+        #progressBarFill {
+            width: 0%; height: 100%; background: #7F522B; transition: width 0.1s ease;
+        }
+        #loadingPercent {
+            font-size: 0.9rem; color: #e3d2b9; font-weight: bold; margin-top: 5px;
+        }
+
         button {
             border: 1px solid #7F522B; background: #222; color: #e3d2b9;
             padding: 12px 20px; border-radius: 8px; cursor: pointer;
@@ -68,6 +80,10 @@
     <div id="loadingScreen" class="hidden">
         <p>Syncing Desk with Google Drive...</p>
         <p id="loadingMsg" style="font-size:0.8rem; opacity:0.7;"></p>
+        <div id="progressBarContainer" class="hidden">
+            <div id="progressBarFill"></div>
+        </div>
+        <div id="loadingPercent" class="hidden">0%</div>
     </div>
 
     <!-- MAIN GAME -->
@@ -223,17 +239,25 @@
 
     let timerInterval;
 
+    function updateProgress() {
+        const percent = Math.floor((imagesLoaded / totalImages) * 100);
+        document.getElementById("progressBarFill").style.width = `${percent}%`;
+        document.getElementById("loadingPercent").innerText = `${percent}%`;
+    }
+
     function preloadImages(callback) {
         const onLoad = () => { 
             imagesLoaded++; 
+            updateProgress();
             if(imagesLoaded === totalImages) callback(); 
         };
 
         const onError = (e) => {
             const msg = document.getElementById("loadingMsg");
-            const brokenFile = e.target.src.split('/').pop();
+            const brokenFile = e.target.src ? e.target.src.split('/').pop() : "unknown file";
             msg.innerHTML += `<br><span style="color:#ffb0b0;">Failed to load: ${brokenFile}</span>`;
             imagesLoaded++; 
+            updateProgress();
             if(imagesLoaded === totalImages) callback(); 
         };
 
@@ -267,6 +291,9 @@
 
     function initGameEngine() {
         document.getElementById("loadingMsg").innerText = "Loading magical assets...";
+        document.getElementById("progressBarContainer").classList.remove("hidden");
+        document.getElementById("loadingPercent").classList.remove("hidden");
+        
         preloadImages(() => {
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
