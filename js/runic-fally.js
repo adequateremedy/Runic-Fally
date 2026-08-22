@@ -419,6 +419,11 @@ function startRound() {
         state.collectedRunes = {};
         particles = [];
         floatingTexts = [];
+        
+        state.selection = [];
+        state.dissolvingCells = [];
+        state.dissolveTimer = 0;
+        
         RUNE_NAMES.forEach(n => state.collectedRunes[n] = 0);
         
         generateGrid();
