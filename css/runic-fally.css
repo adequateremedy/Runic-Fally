@@ -139,7 +139,7 @@ button:disabled {
 
 .hidden { display: none !important; }
 
-/* GAME UI */
+/* GAME UI (WITH DYNAMIC SCALING FOR BOARD) */
 #gameUI { 
     width: 100%; 
     max-width: min(95vw, 85vh); 
