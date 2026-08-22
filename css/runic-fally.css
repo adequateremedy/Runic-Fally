@@ -36,7 +36,6 @@ html, body {
 .subtitle {
     opacity: 0.8;
     margin-bottom: 20px;
-    font-size: 1.1rem;
 }
 
 .instructions-panel {
@@ -58,7 +57,7 @@ html, body {
 }
 
 .instructions-panel p {
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: #d1c5b4;
     line-height: 1.5;
     margin-top: 0;
@@ -67,7 +66,7 @@ html, body {
 .instructions-panel ul {
     margin: 0;
     padding-left: 20px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: #d1c5b4;
     line-height: 1.5;
 }
@@ -77,7 +76,7 @@ html, body {
 }
 
 #loadingMsg {
-    font-size: 0.9rem; 
+    font-size: 0.8rem; 
     opacity: 0.7;
 }
 
@@ -100,7 +99,7 @@ html, body {
 }
 
 #loadingPercent {
-    font-size: 1rem; 
+    font-size: 0.9rem; 
     color: #e3d2b9; 
     font-weight: bold; 
     margin-top: 5px;
@@ -113,7 +112,7 @@ button {
     padding: 12px 20px; 
     border-radius: 8px; 
     cursor: pointer;
-    font-size: 1.1rem; 
+    font-size: 1rem; 
     font-family: inherit; 
     font-weight: bold;
     transition: background 0.2s, color 0.2s;
@@ -147,29 +146,28 @@ button:disabled {
     padding: 10px; 
     display: flex; 
     flex-direction: column; 
-    gap: 15px; 
+    gap: 10px; 
 }
 
 .header-bar { 
     display: flex; 
     justify-content: space-between; 
     border-bottom: 1px solid #333; 
-    padding-bottom: 15px; 
+    padding-bottom: 10px; 
 }
 
 .stat-box { text-align: center; }
 
 .stat-label { 
-    font-size: 1rem; 
+    font-size: 0.8rem; 
     color: #7F522B; 
     text-transform: uppercase; 
     letter-spacing: 2px; 
 }
 
 .stat-value { 
-    font-size: 2.2rem; 
+    font-size: 1.5rem; 
     font-weight: bold; 
-    margin-top: 5px;
 }
 
 #uiTime { color: #ffb0b0; }
@@ -179,7 +177,7 @@ button:disabled {
     justify-content: space-between; 
     align-items: center; 
     background: #111; 
-    padding: 15px; 
+    padding: 10px; 
     border-radius: 8px; 
     border: 1px solid #333; 
 }
@@ -188,24 +186,17 @@ button:disabled {
     display: flex; 
     align-items: center; 
     gap: 10px; 
-    padding: 10px 18px; 
-    font-size: 1.2rem;
+    padding: 8px 15px; 
 }
 
 #bombBtn img {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 #bombBtn.active { 
     background: #7F522B; 
     color: #fff; 
-}
-
-#totalPointsDisplay {
-    font-size: 1.2rem !important; 
-    color: #e3d2b9; 
-    font-weight: bold;
 }
 
 #canvasContainer { 
@@ -243,7 +234,7 @@ canvas {
     background: #111; 
     border: 2px solid #7F522B; 
     border-radius: 10px; 
-    padding: 30px;
+    padding: 25px;
     text-align: center; 
     max-width: 500px; 
     width: 90%; 
@@ -255,20 +246,14 @@ canvas {
     color: #e3d2b9;
     margin-top: 0;
     border-bottom: 1px solid #333;
-    padding-bottom: 15px;
-    font-size: 2rem;
+    padding-bottom: 10px;
 }
 
 .grade-section {
     background: rgba(255, 255, 255, 0.03);
-    padding: 20px;
+    padding: 15px;
     border-radius: 8px;
     margin-bottom: 20px;
-    font-size: 1.1rem;
-}
-
-.grade-section h3 {
-    font-size: 1.5rem;
 }
 
 .cards-grid { 
@@ -297,17 +282,15 @@ canvas {
     font-weight: bold; 
     margin-top: 5px; 
     color: #e3d2b9;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .modal-buttons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .modal-buttons button {
     width: 100%;
-    font-size: 1.1rem;
-    padding: 14px 20px;
 }
