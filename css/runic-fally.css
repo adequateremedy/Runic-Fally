@@ -185,27 +185,35 @@ button:disabled {
 
 #inventoryBar { 
     display: flex; 
+    flex-wrap: wrap;
     justify-content: space-between; 
     align-items: center; 
     background: #111; 
     padding: 10px; 
     border-radius: 8px; 
     border: 1px solid #333; 
+    gap: 10px;
 }
 
-#bombBtn { 
+#starControls {
+    display: flex;
+    gap: 5px;
+}
+
+.star-btn { 
     display: flex; 
     align-items: center; 
-    gap: 10px; 
-    padding: 8px 15px; 
+    gap: 5px; 
+    padding: 6px 10px; 
+    font-size: 0.9rem;
 }
 
-#bombBtn img {
-    width: 20px;
-    height: 20px;
+.star-btn img {
+    width: 16px;
+    height: 16px;
 }
 
-#bombBtn.active { 
+.star-btn.active { 
     background: #7F522B; 
     color: #fff !important; 
 }
