@@ -112,6 +112,7 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
+        state.stars = 0;
         await saveDriveData();
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
@@ -140,6 +141,7 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
         playerJsonData.class1Points = 0;
         playerJsonData.class1Round = 1;
         playerJsonData.class1Exp = 0;
+        state.stars = 0;
         await saveDriveData();
         pauseBGM();
         BGM_TRACKS[currentTrackIndex].currentTime = 0;
@@ -406,7 +408,6 @@ function startRound() {
         state.playing = true;
         state.inputLocked = false;
         state.bombMode = false;
-        state.stars = 0;
         state.collectedRunes = {};
         particles = [];
         floatingTexts = [];
