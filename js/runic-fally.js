@@ -375,7 +375,11 @@ function endRound() {
         if (state.collectedRunes[rune] > 0) {
             let div = document.createElement('div');
             div.className = "tally-card";
-            div.innerHTML = `<img src="${ASSETS.cards[rune].src}"><br><span>x${state.collectedRunes[rune]}</span>`;
+            div.innerHTML = `
+                <span style="display:block; margin-bottom:5px; color:#e3d2b9; font-weight:bold; font-size:1.1rem; letter-spacing:1px;">${rune}</span>
+                <img src="${ASSETS.cards[rune].src}">
+                <br><span>x${state.collectedRunes[rune]}</span>
+            `;
             tc.appendChild(div);
         }
     });
