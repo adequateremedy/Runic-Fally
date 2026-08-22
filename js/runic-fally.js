@@ -295,10 +295,19 @@ function showWelcomeScreen() {
 
 function resizeCanvas() {
     const container = document.getElementById("canvasContainer");
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    let w = container.clientWidth;
+    let h = container.clientHeight;
+    
+    // Safety check just in case layout isn't fully calculated yet
+    if (w === 0) {
+        w = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.85) - 20;
+        h = w;
+    }
+
+    canvas.width = w;
+    canvas.height = h;
     tileSize = canvas.width / COLS;
-    drawGrid();
+    if (grid.length > 0) drawGrid();
 }
 
 function getActiveRuneTypes() {
@@ -384,35 +393,40 @@ function startRound() {
         switchScreen('complete');
         return;
     }
+    
     switchScreen('game');
-    resizeCanvas(); 
-    playBGM();
-
-    state.roundScore = 0;
-    state.timeLeft = 60;
-    state.playing = true;
-    state.inputLocked = false;
-    state.bombMode = false;
-    state.stars = 0;
-    state.collectedRunes = {};
-    particles = [];
-    floatingTexts = [];
-    RUNE_NAMES.forEach(n => state.collectedRunes[n] = 0);
     
-    generateGrid();
-    updateUI();
+    // Give browser 1 frame to snap CSS layout into place so height reads correctly
+    requestAnimationFrame(() => {
+        resizeCanvas(); 
+        playBGM();
 
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-        if(!state.playing) return;
-        state.timeLeft--;
+        state.roundScore = 0;
+        state.timeLeft = 60;
+        state.playing = true;
+        state.inputLocked = false;
+        state.bombMode = false;
+        state.stars = 0;
+        state.collectedRunes = {};
+        particles = [];
+        floatingTexts = [];
+        RUNE_NAMES.forEach(n => state.collectedRunes[n] = 0);
+        
+        generateGrid();
         updateUI();
-        if(state.timeLeft <= 0) {
-            endRound();
-        }
-    }, 1000);
-    
-    requestAnimationFrame(gameLoop);
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if(!state.playing) return;
+            state.timeLeft--;
+            updateUI();
+            if(state.timeLeft <= 0) {
+                endRound();
+            }
+        }, 1000);
+        
+        requestAnimationFrame(gameLoop);
+    });
 }
 
 function endRound() {
@@ -500,20 +514,60 @@ function createBlastParticle(x, y) {
     };
 }
 
+// --- GLOBAL FAE SPARKLES (Everywhere on Screen) ---
+const fxCanvas = document.getElementById("fxCanvas");
+const fxCtx = fxCanvas.getContext("2d");
+let globalSparkles = [];
+
+function resizeFx() {
+    fxCanvas.width = window.innerWidth;
+    fxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeFx);
+resizeFx();
+
+function spawnGlobalSparkle(x, y) {
+    for(let i=0; i<2; i++) {
+        globalSparkles.push(createSparkleParticle(x, y));
+    }
+}
+
+window.addEventListener('mousemove', (e) => spawnGlobalSparkle(e.clientX, e.clientY));
+window.addEventListener('touchmove', (e) => {
+    if(e.touches.length > 0) {
+        spawnGlobalSparkle(e.touches[0].clientX, e.touches[0].clientY);
+    }
+}, {passive: true});
+
+function fxLoop() {
+    fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    for (let i = globalSparkles.length - 1; i >= 0; i--) {
+        let p = globalSparkles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        let alpha = p.life / p.maxLife;
+        fxCtx.fillStyle = `rgba(255, 255, 200, ${alpha})`;
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        fxCtx.fill();
+        p.life--;
+        if (p.life <= 0) globalSparkles.splice(i, 1);
+    }
+    requestAnimationFrame(fxLoop);
+}
+requestAnimationFrame(fxLoop);
+
 // --- INTERACTION ---
 function setupInput() {
-    const getExactPos = (e) => {
+    const getGridPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
-    };
-
-    const getGridPos = (e) => {
-        const pos = getExactPos(e);
-        return { c: Math.floor(pos.x / tileSize), r: Math.floor(pos.y / tileSize) };
+        let x = (clientX - rect.left) * scaleX;
+        let y = (clientY - rect.top) * scaleY;
+        return { c: Math.floor(x / tileSize), r: Math.floor(y / tileSize) };
     };
 
     const onStart = (e) => {
@@ -541,12 +595,6 @@ function setupInput() {
     const onMove = (e) => {
         if (!state.dragging || !state.playing || state.inputLocked) return;
         
-        // Sparkle Trail Effect
-        const exactPos = getExactPos(e);
-        for(let i=0; i<2; i++) {
-            particles.push(createSparkleParticle(exactPos.x, exactPos.y));
-        }
-
         const { r, c } = getGridPos(e);
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
 
