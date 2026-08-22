@@ -8,20 +8,51 @@
 </head>
 <body>
 
-    <!-- AUTH SCREENS -->
-    <div id="loginScreen">
-        <h1>Eidolon School</h1>
-        <p class="subtitle">Class 1: Runic-Fally (Ages 2-3)</p>
-        <button id="googleSignInButton">Sign in with Google</button>
-    </div>
-
-    <div id="loadingScreen" class="hidden">
+    <!-- LOADING SCREEN -->
+    <div id="loadingScreen">
         <p>Syncing Desk with Google Drive...</p>
         <p id="loadingMsg"></p>
         <div id="progressBarContainer" class="hidden">
             <div id="progressBarFill"></div>
         </div>
         <div id="loadingPercent" class="hidden">0%</div>
+    </div>
+
+    <!-- WELCOME / INSTRUCTIONS SCREEN -->
+    <div id="welcomeScreen" class="hidden">
+        <h1>Eidolon School</h1>
+        <p class="subtitle">Class 1: Runic-Fally (Ages 2-3)</p>
+        
+        <!-- Shown if 0 points -->
+        <div id="newPlayerPanel" class="hidden">
+            <div class="instructions-panel">
+                <h3>Class Introduction</h3>
+                <p>Welcome to Runic-Fally. Your progress is automatically saved to your Google Drive at the end of every round. You may leave and return at any time without losing your work.</p>
+                
+                <h3 style="margin-top: 15px;">How to Pass</h3>
+                <ul>
+                    <li><strong>Connect:</strong> Drag to link 3 or more matching stones.</li>
+                    <li><strong>Score:</strong> Longer chains earn more points (3=1pt, 4=5pts, 5=10pts, 6+=20pts).</li>
+                    <li><strong>Bombs:</strong> Match 4+ to earn a Star Bomb. Tap 'Place Star', swap a stone, and tap it to blast the area!</li>
+                    <li><strong>Goal:</strong> Accumulate 2,000 Total Points across all rounds to earn an A+ and 100 EXP.</li>
+                </ul>
+            </div>
+            <button id="startClassBtn">Start Class</button>
+        </div>
+
+        <!-- Shown if > 0 points -->
+        <div id="returningPlayerPanel" class="hidden">
+            <div class="instructions-panel" style="text-align: center;">
+                <h3>Welcome Back!</h3>
+                <p>Your previous progress was securely loaded from Google Drive.</p>
+                <h2 style="margin: 15px 0 5px 0;">Current Grade: <span id="welcomeGrade">F</span></h2>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0;">Class Progress: <span id="welcomePercent">0</span>%</p>
+                <p style="color: #d1c5b4; font-size: 0.85rem; margin-top: 15px;">(Reminder: 2,000 points are required to pass with an A+)</p>
+            </div>
+            <button id="continueClassBtn">Continue Class</button>
+        </div>
+        
+        <button id="hubRedirectBtn" style="margin-top: 20px; background: transparent; border: none; font-size: 0.8rem; text-decoration: underline;">Return to Hub</button>
     </div>
 
     <!-- MAIN GAME UI -->
