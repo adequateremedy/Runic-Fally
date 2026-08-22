@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Class 1: Runic-Fally</title>
-    <!-- Cache bust version 9 for Star Merging System and Ghost Flare fix -->
-    <link rel="stylesheet" href="css/runic-fally.css?v=9">
+    <!-- Cache bust version 10 for individual Star Tier selection buttons -->
+    <link rel="stylesheet" href="css/runic-fally.css?v=10">
 </head>
 <body>
 
-    <!-- GLOBAL FX CANVAS (For Sparkles Everywhere) -->
+    <!-- GLOBAL FX CANVAS -->
     <canvas id="fxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999;"></canvas>
 
     <!-- LOADING SCREEN -->
@@ -47,7 +47,7 @@
 
                 <h3 style="margin-top: 20px;">Star Magic:</h3>
                 <p>Anytime you collect a chain of 4 or more, you will earn a Star. If you collect 3 Regular Stars, they automatically merge into a powerful <strong>Big Star</strong>! Collect 3 Big Stars, and they forge a massive <strong>Giant Star</strong>.</p>
-                <p>You may tap the Star button and swap it with any stone on the board. To activate it, simply tap it one more time to release a brilliant burst of magic, destroying nearby stones for points!</p>
+                <p>You may tap any of your Star buttons and swap it with any stone on the board. To activate it, simply tap it one more time to release a brilliant burst of magic, destroying nearby stones for points!</p>
                 
                 <p style="margin-top: 20px; font-style: italic; opacity: 0.8;">Do not fret if you need to rest; your progress is safely anchored at the end of every round, allowing you to leave and return without losing your work.</p>
             </div>
@@ -97,10 +97,17 @@
         </div>
 
         <div id="inventoryBar">
-            <button id="bombBtn" disabled>
-                <img src="assets/Star/Star-Symbol.png" alt="Star"> 
-                Place Star ( 0 )
-            </button>
+            <div id="starControls">
+                <button id="btnStarReg" class="star-btn" disabled>
+                    <img src="assets/Star/Star-Symbol.png" alt="Star"> <span id="countReg">0</span>
+                </button>
+                <button id="btnStarBig" class="star-btn" style="color: #66ffff;" disabled>
+                    <img src="assets/Star/Star-Symbol.png" alt="Big Star"> <span id="countBig">0</span>
+                </button>
+                <button id="btnStarGiant" class="star-btn" style="color: #ff66ff;" disabled>
+                    <img src="assets/Star/Star-Symbol.png" alt="Giant Star"> <span id="countGiant">0</span>
+                </button>
+            </div>
             <div id="totalPointsDisplay" style="font-size: 0.9rem; color: #e3d2b9; font-weight: bold;">
                 Total Points: <span id="uiTotalPoints">0</span>
             </div>
@@ -146,6 +153,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/runic-fally.js?v=9"></script>
+    <script type="module" src="js/runic-fally.js?v=10"></script>
 </body>
 </html>
