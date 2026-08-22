@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
 
 // FIREBASE SETUP
 const firebaseConfig = {
@@ -9,27 +9,24 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/drive.appdata');
 
 // DATA LOGIC
 let gDriveToken = sessionStorage.getItem("gDriveToken") || null;
 let dataFileId = null;
 let playerJsonData = {};
-let engineStarted = false;
 
 const MAX_POINTS = 2000;
 const POINTS_PER_EXP = 20;
 
 // AUDIO ENGINE
 const BGM_TRACKS = [
-    new Audio('assets/Music/song1.mp3'),
-    new Audio('assets/Music/song2.mp3')
+    new Audio('assets/Music/Garden-of-Clocks.mp3'),
+    new Audio('assets/Music/Preschool-Fae.mp3')
 ];
 let currentTrackIndex = 0;
 
 BGM_TRACKS.forEach((track, index) => {
-    track.volume = 0.5; // Smooth background volume
+    track.volume = 0.5;
     track.addEventListener('ended', () => {
         currentTrackIndex = (index + 1) % BGM_TRACKS.length;
         BGM_TRACKS[currentTrackIndex].play().catch(e => console.log("Audio play prevented:", e));
@@ -45,8 +42,8 @@ function pauseBGM() {
 }
 
 const screens = {
-    login: document.getElementById('loginScreen'),
     loading: document.getElementById('loadingScreen'),
+    welcome: document.getElementById('welcomeScreen'),
     game: document.getElementById('gameUI'),
     tally: document.getElementById('tallyModal'),
     complete: document.getElementById('completeModal')
@@ -78,7 +75,6 @@ async function syncDriveData() {
 async function saveDriveData() {
     if (!dataFileId) return;
     
-    // Automatically configure the EXP conversion before saving
     playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
     if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
 
@@ -89,27 +85,14 @@ async function saveDriveData() {
     });
 }
 
-// AUTHENTICATION
+// AUTHENTICATION & INITIALIZATION
 onAuthStateChanged(auth, async (user) => {
     if (user && gDriveToken) {
-        switchScreen('loading');
         await syncDriveData();
-        initGameEngine();
-    }
-});
-
-document.getElementById("googleSignInButton").addEventListener("click", async () => {
-    switchScreen('loading');
-    try {
-        const result = await signInWithPopup(auth, provider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        gDriveToken = credential.accessToken;
-        sessionStorage.setItem("gDriveToken", gDriveToken);
-        await syncDriveData();
-        initGameEngine();
-    } catch (e) {
-        console.error(e);
-        switchScreen('login');
+        initAssetLoading();
+    } else {
+        // If they bypass the Hub and have no token, send them back
+        window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
     }
 });
 
@@ -119,6 +102,10 @@ document.getElementById("returnHubBtn").addEventListener("click", () => {
 });
 
 document.getElementById("completeReturnHubBtn").addEventListener("click", () => {
+    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
+});
+
+document.getElementById("hubRedirectBtn").addEventListener("click", () => {
     window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
 });
 
@@ -144,6 +131,14 @@ document.getElementById("nextRoundBtn").addEventListener("click", () => {
     startRound();
 });
 
+document.getElementById("startClassBtn").addEventListener("click", () => {
+    startRound();
+});
+
+document.getElementById("continueClassBtn").addEventListener("click", () => {
+    startRound();
+});
+
 // ==========================================
 // GAME ENGINE
 // ==========================================
@@ -156,7 +151,6 @@ const ASSETS = { normal: {}, glow: {}, cards: {}, star: null, starGlow: null };
 let imagesLoaded = 0;
 let totalImages = (RUNE_NAMES.length * 3) + 2;
 
-// Locked 10x10 Grid
 const COLS = 10;
 const ROWS = 10;
 let tileSize = 0;
@@ -224,19 +218,50 @@ function preloadImages(callback) {
     ASSETS.starGlow.src = `assets/Star/Star-Symbol-Glow.png`; 
 }
 
-function initGameEngine() {
-    if (engineStarted) return; 
-    engineStarted = true;
+function calculateGrade(points) {
+    let percent = Math.floor((points / MAX_POINTS) * 100);
+    if (percent > 100) percent = 100;
+    
+    let grade = "F";
+    if (percent >= 90) grade = "A";
+    else if (percent >= 70) grade = "B";
+    else if (percent >= 50) grade = "C";
+    else if (percent >= 30) grade = "D";
 
+    return { grade, percent };
+}
+
+function initAssetLoading() {
     document.getElementById("loadingMsg").innerText = "Loading magical assets...";
     document.getElementById("progressBarContainer").classList.remove("hidden");
     document.getElementById("loadingPercent").classList.remove("hidden");
     
     preloadImages(() => {
         setupInput();
-        startRound();
         window.addEventListener('resize', resizeCanvas);
+        showWelcomeScreen();
     });
+}
+
+function showWelcomeScreen() {
+    switchScreen('welcome');
+    if (playerJsonData.class1Points > 0) {
+        document.getElementById('newPlayerPanel').classList.add('hidden');
+        document.getElementById('returningPlayerPanel').classList.remove('hidden');
+        
+        const result = calculateGrade(playerJsonData.class1Points);
+        document.getElementById("welcomeGrade").innerText = result.grade;
+        document.getElementById("welcomePercent").innerText = result.percent;
+        
+        const gradeColor = result.grade === "A" ? "#4caf50" : 
+                           result.grade === "B" ? "#8bc34a" : 
+                           result.grade === "C" ? "#ffeb3b" : 
+                           result.grade === "D" ? "#ff9800" : "#f44336";
+        document.getElementById("welcomeGrade").style.color = gradeColor;
+    } else {
+        document.getElementById('returningPlayerPanel').classList.add('hidden');
+        document.getElementById('newPlayerPanel').classList.remove('hidden');
+    }
 }
 
 function resizeCanvas() {
@@ -248,7 +273,6 @@ function resizeCanvas() {
 }
 
 function getActiveRuneTypes() {
-    // Difficulty scaling: Round 1 = 4 types, progressively adding more
     const typesPerRound = [4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9];
     let numTypes = typesPerRound[Math.min(playerJsonData.class1Round - 1, 10)];
     return RUNE_NAMES.slice(0, numTypes);
@@ -359,31 +383,16 @@ function startRound() {
     requestAnimationFrame(gameLoop);
 }
 
-function calculateGrade(points) {
-    let percent = Math.floor((points / MAX_POINTS) * 100);
-    if (percent > 100) percent = 100;
-    
-    let grade = "F";
-    if (percent >= 90) grade = "A";
-    else if (percent >= 70) grade = "B";
-    else if (percent >= 50) grade = "C";
-    else if (percent >= 30) grade = "D";
-
-    return { grade, percent };
-}
-
 function endRound() {
     state.playing = false;
     clearInterval(timerInterval);
     pauseBGM();
     
-    // Add round score to total
     playerJsonData.class1Points += state.roundScore;
     playerJsonData.class1Round++;
     
     saveDriveData(); 
 
-    // Calculate Grades based on total progression
     const result = calculateGrade(playerJsonData.class1Points);
 
     document.getElementById("tallyRoundNumber").innerText = playerJsonData.class1Round - 1;
@@ -391,14 +400,12 @@ function endRound() {
     document.getElementById("tallyGrade").innerText = result.grade;
     document.getElementById("tallyPercent").innerText = result.percent;
     
-    // Set grade color
     const gradeColor = result.grade === "A" ? "#4caf50" : 
                        result.grade === "B" ? "#8bc34a" : 
                        result.grade === "C" ? "#ffeb3b" : 
                        result.grade === "D" ? "#ff9800" : "#f44336";
     document.getElementById("tallyGrade").style.color = gradeColor;
     
-    // Show collected cards
     const tc = document.getElementById("tallyCards");
     tc.innerHTML = "";
     Object.keys(state.collectedRunes).forEach(rune => {
@@ -530,7 +537,7 @@ function explodeStar(r, c) {
 
 function addExplodedScore(type) {
     if(type && type !== 'STAR') {
-        state.roundScore += 1; // Base bomb collection point
+        state.roundScore += 1; 
         state.collectedRunes[type]++;
     }
 }
@@ -559,7 +566,6 @@ function drawGrid() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!grid || grid.length === 0) return; 
 
-    // Draw connections
     if (state.selection.length > 1) {
         ctx.beginPath();
         ctx.lineWidth = 6;
@@ -575,7 +581,6 @@ function drawGrid() {
         ctx.stroke();
     }
 
-    // Draw Stones
     const padding = tileSize * 0.1;
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
