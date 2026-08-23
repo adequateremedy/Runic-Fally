@@ -861,9 +861,11 @@ function explodeStar(r, c, tier) {
     let cx = c * tileSize + tileSize/2;
     let cy = r * tileSize + tileSize/2;
     
-    // Play sound effect
-    sfxBlast.currentTime = 0;
-    sfxBlast.play().catch(e => console.log("SFX play prevented:", e));
+    // Play sound effect using the clone method
+    const sfxClone = sfxBlast.cloneNode();
+    sfxClone.volume = 0.8;
+    sfxClone.play().catch(e => console.log("SFX play prevented:", e));
+    sfxClone.addEventListener('ended', () => sfxClone.remove());
     
     // Blast Particles
     for(let i=0; i<pCount; i++) {
