@@ -79,6 +79,15 @@ async function syncDriveData() {
         playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
     
+    if (!playerJsonData.class1TotalRunes) {
+        playerJsonData.class1TotalRunes = {};
+        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
+    }
+    
+    if (!playerJsonData.inventory) {
+        playerJsonData.inventory = [];
+    }
+    
     state.regularStars = playerJsonData.class1RegularStars;
     state.bigStars = playerJsonData.class1BigStars;
     state.giantStars = playerJsonData.class1GiantStars;
@@ -128,6 +137,7 @@ document.getElementById("restartClassBtn").addEventListener("click", async () =>
         playerJsonData.class1RegularStars = 0;
         playerJsonData.class1BigStars = 0;
         playerJsonData.class1GiantStars = 0;
+        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
         state.regularStars = 0;
         state.bigStars = 0;
         state.giantStars = 0;
@@ -162,6 +172,7 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
         playerJsonData.class1RegularStars = 0;
         playerJsonData.class1BigStars = 0;
         playerJsonData.class1GiantStars = 0;
+        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
         state.regularStars = 0;
         state.bigStars = 0;
         state.giantStars = 0;
@@ -179,6 +190,14 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
     switchScreen('loading');
     playerJsonData.schoolProgress.class1 = true;
     playerJsonData.exp = (playerJsonData.exp || 0) + 100;
+    
+    // Inject the highest tallied Runic Stone into the player's Hub Inventory
+    playerJsonData.inventory.push({
+        name: `${state.winningRune} Stone`,
+        category: "Runic Stone",
+        image: `assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`
+    });
+
     await saveDriveData();
     window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
 });
@@ -219,7 +238,8 @@ let state = {
     bombTier: null,
     collectedRunes: {},
     dissolveTimer: 0,
-    dissolvingCells: []
+    dissolvingCells: [],
+    winningRune: null
 };
 
 let timerInterval;
@@ -297,14 +317,15 @@ function initAssetLoading() {
 }
 
 function showWelcomeScreen() {
-    switchScreen('welcome');
     if (playerJsonData.schoolProgress && playerJsonData.schoolProgress.class1 === true) {
+        window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
+        return;
+    }
+    
+    switchScreen('welcome');
+    
+    if (playerJsonData.class1Points > 0) {
         document.getElementById('newPlayerPanel').classList.add('hidden');
-        document.getElementById('returningPlayerPanel').classList.add('hidden');
-        document.getElementById('graduatedPanel').classList.remove('hidden');
-    } else if (playerJsonData.class1Points > 0) {
-        document.getElementById('newPlayerPanel').classList.add('hidden');
-        document.getElementById('graduatedPanel').classList.add('hidden');
         document.getElementById('returningPlayerPanel').classList.remove('hidden');
         const result = calculateGrade(playerJsonData.class1Points);
         document.getElementById("welcomeGrade").innerText = result.grade;
@@ -316,7 +337,6 @@ function showWelcomeScreen() {
         document.getElementById("welcomeGrade").style.color = gradeColor;
     } else {
         document.getElementById('returningPlayerPanel').classList.add('hidden');
-        document.getElementById('graduatedPanel').classList.add('hidden');
         document.getElementById('newPlayerPanel').classList.remove('hidden');
     }
 }
@@ -456,9 +476,26 @@ function awardStar() {
     }
 }
 
+function triggerGraduation() {
+    let highestRune = RUNE_NAMES[0];
+    let maxCount = -1;
+    RUNE_NAMES.forEach(rune => {
+        if (playerJsonData.class1TotalRunes[rune] > maxCount) {
+            maxCount = playerJsonData.class1TotalRunes[rune];
+            highestRune = rune;
+        }
+    });
+    
+    state.winningRune = highestRune;
+    document.getElementById("winningRuneName").innerText = highestRune;
+    document.getElementById("winningRuneImg").src = `assets/Runic-Stones/${highestRune}-Runic-Stone.png`;
+    
+    switchScreen('complete');
+}
+
 function startRound() {
     if(playerJsonData.class1Points >= MAX_POINTS) {
-        switchScreen('complete');
+        triggerGraduation();
         return;
     }
     
@@ -509,6 +546,10 @@ function endRound() {
     playerJsonData.class1Points += state.roundScore;
     playerJsonData.class1Round++;
     
+    Object.keys(state.collectedRunes).forEach(rune => {
+        playerJsonData.class1TotalRunes[rune] += state.collectedRunes[rune];
+    });
+    
     saveDriveData(); 
 
     const result = calculateGrade(playerJsonData.class1Points);
@@ -540,7 +581,7 @@ function endRound() {
     });
 
     if(playerJsonData.class1Points >= MAX_POINTS) {
-        switchScreen('complete');
+        triggerGraduation();
     } else {
         screens.tally.classList.remove('hidden');
     }
