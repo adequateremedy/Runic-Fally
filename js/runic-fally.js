@@ -113,14 +113,14 @@ async function saveDriveData() {
     });
 }
 
-async function uploadImageToDrive(blob, fileName) {
+async function uploadImageToDrive(file) {
     const metadata = {
-        name: fileName,
+        name: file.name,
         parents: ['appDataFolder']
     };
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', blob);
+    form.append('file', file);
 
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
@@ -210,14 +210,29 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
 document.getElementById("saveGraduateBtn").addEventListener("click", async () => {
     document.getElementById("loadingMsg").innerText = "Uploading Runic Stone & Saving Graduation...";
     switchScreen('loading');
+    
+    // Check if they already received the Class 1 EXP to prevent stacking
+    if (!playerJsonData.class1ExpAwarded) {
+        playerJsonData.exp = (playerJsonData.exp || 0) + 100;
+        playerJsonData.class1ExpAwarded = true;
+    }
+    
     playerJsonData.schoolProgress.class1 = true;
-    playerJsonData.exp = (playerJsonData.exp || 0) + 100;
     
     try {
         const imgRes = await fetch(`assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`);
         const imgBlob = await imgRes.blob();
         
-        const fileId = await uploadImageToDrive(imgBlob, `${state.winningRune}-Runic-Stone.png`);
+        // Convert to rigid File object so Google Drive creates a valid image
+        const imgFile = new File([imgBlob], `${state.winningRune}-Runic-Stone.png`, { type: 'image/png' });
+        const fileId = await uploadImageToDrive(imgFile);
+        
+        // Wipe existing Runic Stones to prevent inventory duplicates
+        if (playerJsonData.inventory) {
+            playerJsonData.inventory = playerJsonData.inventory.filter(item => item.category !== "Runic Stone");
+        } else {
+            playerJsonData.inventory = [];
+        }
         
         playerJsonData.inventory.push({
             name: `${state.winningRune} Stone`,
