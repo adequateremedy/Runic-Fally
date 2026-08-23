@@ -321,11 +321,6 @@ function initAssetLoading() {
 }
 
 function showWelcomeScreen() {
-    if (playerJsonData.schoolProgress && playerJsonData.schoolProgress.class1 === true) {
-        window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
-        return;
-    }
-    
     switchScreen('welcome');
     
     if (playerJsonData.class1Points > 0) {
