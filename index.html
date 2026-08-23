@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Class 1: Runic-Fally</title>
-    <!-- Cache bust version 11 for mobile scrolling fix -->
-    <link rel="stylesheet" href="css/runic-fally.css?v=11">
+    <link rel="stylesheet" href="css/runic-fally.css?v=12">
 </head>
 <body>
 
-    <!-- GLOBAL FX CANVAS -->
     <canvas id="fxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999;"></canvas>
 
-    <!-- LOADING SCREEN -->
     <div id="loadingScreen">
         <p>Syncing Desk with Google Drive...</p>
         <p id="loadingMsg"></p>
@@ -22,64 +19,50 @@
         <div id="loadingPercent" class="hidden">0%</div>
     </div>
 
-    <!-- WELCOME / INSTRUCTIONS SCREEN -->
     <div id="welcomeScreen" class="hidden">
         <h1>Eidolon School</h1>
         <p class="subtitle">Class 1: Runic-Fally (Ages 2-3)</p>
         
-        <!-- Shown if 0 points -->
         <div id="newPlayerPanel" class="hidden">
             <div class="instructions-panel">
                 <p>Welcome to Eidolon's School for the Gifted, little one.</p>
-                <p>I am sure you have already felt it—that very unique energy humming inside you. Even at such a young age, your magic follows you, making connections and growing right alongside you.</p>
-                <p>In Runic-Fally, we teach our youngest Fae how to guide that energy. Using just your fingertip, you will link matching Runic Stones together. As you draw your finger across them, the ancient symbols will glow white. Simply release your touch to collect the chain and earn points toward your grade!</p>
+                <p>I am sure you have already felt it—that unique Energy inside you. Even at such a young age, that Energy follows you, making connections and growing right alongside you.</p>
+                <p>In Runic-Fally, I teach our youngest Fae how to guide that Energy. Using just that sparkle in your fingertip, you will link matching Runic Stones together. As you drag your finger across them, the ancient symbols will glow white. Release your touch, and collect the chain to earn points toward your grade!</p>
                 <p>In order to pass this class successfully, you must gather 2,000 points.</p>
-                <p>But be mindful, little one: every new round introduces a brand new Runic Symbol to the board. The more rounds it takes you, the harder it will become to see the connections. If the board becomes too difficult, you may be forced to restart your lesson from the beginning.</p>
+                <p>But be mindful, little one: every new round introduces a brand new Runic Symbol to the board. The more Rounds it takes you, the harder it will become to see the connections. If the board becomes too difficult, you may be forced to restart the class from the beginning.</p>
                 
-                <h3 style="margin-top: 20px;">How to weave your magic:</h3>
+                <h3 style="margin-top: 20px;">Making Runic Stone Chains:</h3>
                 <ul>
-                    <li>You must connect 3 or more matching stones to form a chain. The larger the chain, the more points you collect!</li>
+                    <li>You must connect 3 or more matching stones to form a chain. The larger the chain, the more points you'll collect!</li>
                     <li>3 Stones = 1 pt</li>
                     <li>4 Stones = 5 pts</li>
                     <li>5 Stones = 10 pts</li>
                     <li>6+ Stones = 20 pts</li>
                 </ul>
 
-                <h3 style="margin-top: 20px;">Star Magic:</h3>
+                <h3 style="margin-top: 20px;">Star's Energy:</h3>
                 <p>Anytime you collect a chain of 4 or more, you will earn a Star. If you collect 3 Regular Stars, they automatically merge into a powerful <strong>Big Star</strong>! Collect 3 Big Stars, and they forge a massive <strong>Giant Star</strong>.</p>
-                <p>You may tap any of your Star buttons and swap it with any stone on the board. To activate it, simply tap it one more time to release a brilliant burst of magic, destroying nearby stones for points!</p>
+                <p>You may tap any of your Star buttons and swap it with any stone on the board. To activate it, simply tap it one more time to release a brilliant burst of Energy, destroying nearby Runic Stones for points!</p>
                 
-                <p style="margin-top: 20px; font-style: italic; opacity: 0.8;">Do not fret if you need to rest; your progress is safely anchored at the end of every round, allowing you to leave and return without losing your work.</p>
+                <p style="margin-top: 20px; font-style: italic; opacity: 0.8;">Do not fret if you need to rest; your progress is safely anchored at the end of every Round, allowing you to leave and return without losing your place.</p>
             </div>
             <button id="startClassBtn">Start Class</button>
         </div>
 
-        <!-- Shown if > 0 points (and not graduated) -->
         <div id="returningPlayerPanel" class="hidden">
             <div class="instructions-panel" style="text-align: center;">
                 <h3>Welcome Back!</h3>
-                <p>Your previous progress was securely loaded from Google Drive.</p>
+                <p>Your previous progress was securely saved.</p>
                 <h2 style="margin: 15px 0 5px 0;">Current Grade: <span id="welcomeGrade">F</span></h2>
                 <p style="font-size: 0.85rem; opacity: 0.8; margin-top: 0;">Class Progress: <span id="welcomePercent">0</span>%</p>
                 <p style="color: #d1c5b4; font-size: 0.85rem; margin-top: 15px;">(Reminder: 2,000 points are required to pass with an A+)</p>
             </div>
             <button id="continueClassBtn">Continue Class</button>
         </div>
-
-        <!-- Shown if Already Graduated -->
-        <div id="graduatedPanel" class="hidden">
-            <div class="instructions-panel" style="text-align: center;">
-                <h3>Class Completed</h3>
-                <p>You have successfully graduated from Runic-Fally.</p>
-                <h2 style="color:#4caf50; margin: 15px 0 5px 0;">Grade: A+</h2>
-                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0;">100 EXP Claimed</p>
-            </div>
-        </div>
         
         <button id="hubRedirectBtn" style="margin-top: 20px; background: transparent; border: none; font-size: 0.8rem; text-decoration: underline;">Return to Hub</button>
     </div>
 
-    <!-- MAIN GAME UI -->
     <div id="gameUI" class="hidden">
         <div class="header-bar">
             <div class="stat-box">
@@ -118,7 +101,6 @@
         </div>
     </div>
 
-    <!-- TALLY MODAL -->
     <div id="tallyModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2 id="tallyTitle">Time's Up!</h2>
@@ -139,20 +121,19 @@
         </div>
     </div>
 
-    <!-- CLASS GRADUATE MODAL -->
     <div id="completeModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h1 style="color:#e3d2b9; margin-top: 0;">Class Graduate!</h1>
-            <p>You have mastered Runic-Fally with an A+ Grade!</p>
-            <p style="color:#7F522B; font-weight:bold; font-size: 1.2rem;">2,000 Points Reached</p>
-            <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 25px;">Choose to lock in your score and claim your 100 EXP, or retake the class from the beginning.</p>
+            <h1 style="color:#e3d2b9; margin-top: 0;">Class Mastered!</h1>
+            <p>You have guided your Energy to connect the Runic Stones beautifully, little one. You have collected 2,000 points, and earned an A+!</p>
+            <p>I've been watching your connections closely. Across all Rounds, your unique Energy resonated most deeply with the <strong id="winningRuneName" style="color:#7F522B;"></strong> Runic Stone. As a reward for your dedication, I am gifting this Runic Stone to you.</p>
+            <img id="winningRuneImg" src="" alt="Winning Runic Stone" style="width: 80px; height: 80px; margin: 15px auto; display: block; border-radius: 10px; border: 2px solid #7F522B; background-color: #1a1a1a; padding: 5px;">
             <div class="modal-buttons">
-                <button id="saveGraduateBtn" style="background:#4caf50; border-color:#4caf50; color:#fff;">Save & Return to Hub (+100 EXP)</button>
+                <button id="saveGraduateBtn" style="background:#4caf50; border-color:#4caf50; color:#fff;">Lock in Grade & Claim Stone (+100 EXP)</button>
                 <button id="retakeGraduateBtn" class="danger-btn">Retake Class</button>
             </div>
         </div>
     </div>
 
-    <script type="module" src="js/runic-fally.js?v=11"></script>
+    <script type="module" src="js/runic-fally.js?v=12"></script>
 </body>
 </html>
