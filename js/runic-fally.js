@@ -113,6 +113,24 @@ async function saveDriveData() {
     });
 }
 
+async function uploadImageToDrive(blob, fileName) {
+    const metadata = {
+        name: fileName,
+        parents: ['appDataFolder']
+    };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${gDriveToken}` },
+        body: form
+    });
+    const result = await res.json();
+    return result.id;
+}
+
 // AUTHENTICATION & INITIALIZATION
 onAuthStateChanged(auth, async (user) => {
     if (user && gDriveToken) {
@@ -190,17 +208,26 @@ document.getElementById("retakeGraduateBtn").addEventListener("click", async () 
 });
 
 document.getElementById("saveGraduateBtn").addEventListener("click", async () => {
-    document.getElementById("loadingMsg").innerText = "Saving Graduation & Adding 100 EXP...";
+    document.getElementById("loadingMsg").innerText = "Uploading Runic Stone & Saving Graduation...";
     switchScreen('loading');
     playerJsonData.schoolProgress.class1 = true;
     playerJsonData.exp = (playerJsonData.exp || 0) + 100;
     
-    // Inject the highest tallied Runic Stone into the player's Hub Inventory
-    playerJsonData.inventory.push({
-        name: `${state.winningRune} Stone`,
-        category: "Runic Stone",
-        image: `assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`
-    });
+    try {
+        const imgRes = await fetch(`assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`);
+        const imgBlob = await imgRes.blob();
+        
+        const fileId = await uploadImageToDrive(imgBlob, `${state.winningRune}-Runic-Stone.png`);
+        
+        playerJsonData.inventory.push({
+            name: `${state.winningRune} Stone`,
+            category: "Runic Stone",
+            imageId: fileId,
+            desc: "The true benefit of this stone will be revealed after completing Awakening Essence."
+        });
+    } catch (err) {
+        console.error("Failed to upload stone to Drive", err);
+    }
 
     await saveDriveData();
     window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
