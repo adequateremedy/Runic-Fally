@@ -220,12 +220,17 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
     playerJsonData.schoolProgress.class1 = true;
     
     try {
+        // Fetch Normal Image
         const imgRes = await fetch(`assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`);
         const imgBlob = await imgRes.blob();
-        
-        // Convert to rigid File object so Google Drive creates a valid image
         const imgFile = new File([imgBlob], `${state.winningRune}-Runic-Stone.png`, { type: 'image/png' });
         const fileId = await uploadImageToDrive(imgFile);
+
+        // Fetch Glow Image
+        const glowRes = await fetch(`assets/Runic-Stones-Glow/${state.winningRune}-Runic-Stone-Glow.png`);
+        const glowBlob = await glowRes.blob();
+        const glowFile = new File([glowBlob], `${state.winningRune}-Runic-Stone-Glow.png`, { type: 'image/png' });
+        const glowFileId = await uploadImageToDrive(glowFile);
         
         // Wipe existing Runic Stones to prevent inventory duplicates
         if (playerJsonData.inventory) {
@@ -238,7 +243,8 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
             name: `${state.winningRune} Stone`,
             category: "Runic Stone",
             imageId: fileId,
-            desc: "The true benefit of this stone will be revealed after completing Awakening Essence."
+            glowImageId: glowFileId,
+            desc: "Every time you touch it, the ancient symbol resonates with your unique energy, casting a stark, luminous white glow."
         });
     } catch (err) {
         console.error("Failed to upload stone to Drive", err);
