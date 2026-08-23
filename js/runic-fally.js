@@ -41,6 +41,10 @@ function pauseBGM() {
     BGM_TRACKS[currentTrackIndex].pause();
 }
 
+// SFX ENGINE
+const sfxBlast = new Audio('assets/SFX/Star-Blast.mp3');
+sfxBlast.volume = 0.8;
+
 const screens = {
     loading: document.getElementById('loadingScreen'),
     welcome: document.getElementById('welcomeScreen'),
@@ -834,6 +838,10 @@ function explodeStar(r, c, tier) {
     
     let cx = c * tileSize + tileSize/2;
     let cy = r * tileSize + tileSize/2;
+    
+    // Play sound effect
+    sfxBlast.currentTime = 0;
+    sfxBlast.play().catch(e => console.log("SFX play prevented:", e));
     
     // Blast Particles
     for(let i=0; i<pCount; i++) {
