@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
 
 // FIREBASE SETUP
 const firebaseConfig = {
@@ -9,6 +9,11 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
+// Force localStorage instead of IndexedDB to align with the Hub and prevent redirect loops
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Persistence error:", error);
+});
 
 // DATA LOGIC
 let gDriveToken = sessionStorage.getItem("gDriveToken") || null;
