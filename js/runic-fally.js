@@ -16,7 +16,7 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 });
 
 // DATA LOGIC
-let gDriveToken = sessionStorage.getItem("gDriveToken") || null;
+let gDriveToken = localStorage.getItem("gDriveToken") || null;
 let dataFileId = null;
 let playerJsonData = {};
 
