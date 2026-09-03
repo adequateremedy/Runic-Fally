@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
 
 // FIREBASE SETUP
 const firebaseConfig = {
@@ -110,6 +110,34 @@ async function syncDriveData() {
     state.giantStars = charData.class1GiantStars;
 }
 
+// TOKEN REFRESH SAFETY NET HELPER
+async function safeAction(actionFunc, redirectUrl = null) {
+    try {
+        await actionFunc();
+        if (redirectUrl) window.location.href = redirectUrl;
+    } catch (err) {
+        if (err.message === "Token Expired" || err.status === 401) {
+            alert("Your session expired! Click OK to securely reconnect and save your progress.");
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.addScope('https://www.googleapis.com/auth/drive.appdata');
+                const result = await signInWithPopup(auth, provider);
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                gDriveToken = credential.accessToken;
+                localStorage.setItem("gDriveToken", gDriveToken);
+                
+                await actionFunc(); // Retry the save with the fresh token
+                if (redirectUrl) window.location.href = redirectUrl;
+            } catch (authErr) {
+                console.error("Re-authentication failed:", authErr);
+                alert("Failed to reconnect. Please click the button to try again.");
+            }
+        } else {
+            console.error("Action failed:", err);
+        }
+    }
+}
+
 async function saveDriveData() {
     if (!dataFileId) return;
     charData.class1Exp = Math.floor(charData.class1Points / POINTS_PER_EXP);
@@ -119,11 +147,15 @@ async function saveDriveData() {
     charData.class1BigStars = state.bigStars;
     charData.class1GiantStars = state.giantStars;
     
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
+    const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${gDriveToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(playerJsonData)
     });
+    
+    if (res.status === 401) {
+        throw new Error("Token Expired");
+    }
 }
 
 async function uploadImageToDrive(file) {
@@ -140,6 +172,9 @@ async function uploadImageToDrive(file) {
         headers: { 'Authorization': `Bearer ${gDriveToken}` },
         body: form
     });
+    
+    if (res.status === 401) throw new Error("Token Expired");
+    
     const result = await res.json();
     return result.id;
 }
@@ -154,36 +189,40 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// NAVIGATION BUTTONS (ADDED COMPLETION SIGNALS)
+// NAVIGATION BUTTONS (WITH SAFETY NET)
 document.getElementById("returnHubBtn").addEventListener("click", () => {
     const isComplete = charData.schoolProgress && charData.schoolProgress.class1;
-    window.location.href = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
+    const url = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
+    safeAction(saveDriveData, url);
 });
 
 document.getElementById("hubRedirectBtn").addEventListener("click", () => {
     const isComplete = charData.schoolProgress && charData.schoolProgress.class1;
-    window.location.href = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
+    const url = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
+    safeAction(saveDriveData, url);
 });
 
-document.getElementById("restartClassBtn").addEventListener("click", async () => {
+document.getElementById("restartClassBtn").addEventListener("click", () => {
     const confirmRestart = confirm("Are you sure you want to restart Class 1? All progress and points will be erased.");
     if (confirmRestart) {
-        charData.class1Points = 0;
-        charData.class1Round = 1;
-        charData.class1Exp = 0;
-        charData.class1RegularStars = 0;
-        charData.class1BigStars = 0;
-        charData.class1GiantStars = 0;
-        RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
-        state.regularStars = 0;
-        state.bigStars = 0;
-        state.giantStars = 0;
-        await saveDriveData();
-        pauseBGM();
-        BGM_TRACKS[currentTrackIndex].currentTime = 0;
-        currentTrackIndex = 0;
-        screens.tally.classList.add('hidden');
-        startRound();
+        safeAction(async () => {
+            charData.class1Points = 0;
+            charData.class1Round = 1;
+            charData.class1Exp = 0;
+            charData.class1RegularStars = 0;
+            charData.class1BigStars = 0;
+            charData.class1GiantStars = 0;
+            RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
+            state.regularStars = 0;
+            state.bigStars = 0;
+            state.giantStars = 0;
+            await saveDriveData();
+            pauseBGM();
+            BGM_TRACKS[currentTrackIndex].currentTime = 0;
+            currentTrackIndex = 0;
+            screens.tally.classList.add('hidden');
+            startRound();
+        });
     }
 });
 
@@ -200,54 +239,51 @@ document.getElementById("continueClassBtn").addEventListener("click", () => {
     startRound();
 });
 
-document.getElementById("retakeGraduateBtn").addEventListener("click", async () => {
+document.getElementById("retakeGraduateBtn").addEventListener("click", () => {
     const confirmRetake = confirm("Are you sure you want to retake the class? This will erase your 2,000 points and return you to Round 1.");
     if (confirmRetake) {
-        charData.class1Points = 0;
-        charData.class1Round = 1;
-        charData.class1Exp = 0;
-        charData.class1RegularStars = 0;
-        charData.class1BigStars = 0;
-        charData.class1GiantStars = 0;
-        RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
-        state.regularStars = 0;
-        state.bigStars = 0;
-        state.giantStars = 0;
-        await saveDriveData();
-        pauseBGM();
-        BGM_TRACKS[currentTrackIndex].currentTime = 0;
-        currentTrackIndex = 0;
-        screens.complete.classList.add('hidden');
-        startRound();
+        safeAction(async () => {
+            charData.class1Points = 0;
+            charData.class1Round = 1;
+            charData.class1Exp = 0;
+            charData.class1RegularStars = 0;
+            charData.class1BigStars = 0;
+            charData.class1GiantStars = 0;
+            RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
+            state.regularStars = 0;
+            state.bigStars = 0;
+            state.giantStars = 0;
+            await saveDriveData();
+            pauseBGM();
+            BGM_TRACKS[currentTrackIndex].currentTime = 0;
+            currentTrackIndex = 0;
+            screens.complete.classList.add('hidden');
+            startRound();
+        });
     }
 });
 
-document.getElementById("saveGraduateBtn").addEventListener("click", async () => {
+document.getElementById("saveGraduateBtn").addEventListener("click", () => {
     document.getElementById("loadingMsg").innerText = "Uploading Runic Stone & Saving Graduation...";
     switchScreen('loading');
     
-    // Check if they already received the Class 1 EXP to prevent stacking
-    if (!charData.class1ExpAwarded) {
-        charData.exp = (charData.exp || 0) + 100;
-        charData.class1ExpAwarded = true;
-    }
-    
-    charData.schoolProgress.class1 = true;
-    
-    try {
-        // Fetch Normal Image
+    safeAction(async () => {
+        if (!charData.class1ExpAwarded) {
+            charData.exp = (charData.exp || 0) + 100;
+            charData.class1ExpAwarded = true;
+        }
+        charData.schoolProgress.class1 = true;
+        
         const imgRes = await fetch(`assets/Runic-Stones/${state.winningRune}-Runic-Stone.png`);
         const imgBlob = await imgRes.blob();
         const imgFile = new File([imgBlob], `${state.winningRune}-Runic-Stone.png`, { type: 'image/png' });
         const fileId = await uploadImageToDrive(imgFile);
 
-        // Fetch Glow Image
         const glowRes = await fetch(`assets/Runic-Stones-Glow/${state.winningRune}-Runic-Stone-Glow.png`);
         const glowBlob = await glowRes.blob();
         const glowFile = new File([glowBlob], `${state.winningRune}-Runic-Stone-Glow.png`, { type: 'image/png' });
         const glowFileId = await uploadImageToDrive(glowFile);
         
-        // Wipe existing Runic Stones to prevent inventory duplicates
         if (charData.inventory) {
             charData.inventory = charData.inventory.filter(item => item.category !== "Runic Stone");
         } else {
@@ -261,12 +297,9 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
             glowImageId: glowFileId,
             desc: "Every time you touch it, the ancient symbol resonates with your unique energy, casting a stark, luminous white glow."
         });
-    } catch (err) {
-        console.error("Failed to upload stone to Drive", err);
-    }
 
-    await saveDriveData();
-    window.location.href = "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true";
+        await saveDriveData();
+    }, "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true");
 });
 
 // ==========================================
@@ -612,7 +645,8 @@ function endRound() {
         charData.class1TotalRunes[rune] += state.collectedRunes[rune];
     });
     
-    saveDriveData(); 
+    // Save to drive using safeAction without a redirect
+    safeAction(saveDriveData);
 
     const result = calculateGrade(charData.class1Points);
 
