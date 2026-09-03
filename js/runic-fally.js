@@ -19,6 +19,7 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 let gDriveToken = localStorage.getItem("gDriveToken") || null;
 let dataFileId = null;
 let playerJsonData = {};
+let charData = {}; // Pointer for Generational Data compatibility
 
 const MAX_POINTS = 2000;
 const POINTS_PER_EXP = 20;
@@ -76,40 +77,47 @@ async function syncDriveData() {
         playerJsonData = await fileRes.json();
     }
 
-    if (playerJsonData.class1Points === undefined) playerJsonData.class1Points = 0;
-    if (playerJsonData.class1Round === undefined) playerJsonData.class1Round = 1;
-    if (playerJsonData.class1Exp === undefined) playerJsonData.class1Exp = 0;
+    // Check for Generational Hub format and set pointer
+    if (playerJsonData.stars && playerJsonData.stars["1"] && playerJsonData.stars["1"].gens && playerJsonData.stars["1"].gens["1"]) {
+        charData = playerJsonData.stars["1"].gens["1"];
+    } else {
+        charData = playerJsonData;
+    }
+
+    if (charData.class1Points === undefined) charData.class1Points = 0;
+    if (charData.class1Round === undefined) charData.class1Round = 1;
+    if (charData.class1Exp === undefined) charData.class1Exp = 0;
     
-    if (playerJsonData.class1RegularStars === undefined) playerJsonData.class1RegularStars = playerJsonData.class1Stars || 0;
-    if (playerJsonData.class1BigStars === undefined) playerJsonData.class1BigStars = 0;
-    if (playerJsonData.class1GiantStars === undefined) playerJsonData.class1GiantStars = 0;
+    if (charData.class1RegularStars === undefined) charData.class1RegularStars = charData.class1Stars || 0;
+    if (charData.class1BigStars === undefined) charData.class1BigStars = 0;
+    if (charData.class1GiantStars === undefined) charData.class1GiantStars = 0;
     
-    if (playerJsonData.schoolProgress === undefined) {
-        playerJsonData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
+    if (charData.schoolProgress === undefined) {
+        charData.schoolProgress = { class1: false, class2: false, class3: false, class4: false, class5: false };
     }
     
-    if (!playerJsonData.class1TotalRunes) {
-        playerJsonData.class1TotalRunes = {};
-        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
+    if (!charData.class1TotalRunes) {
+        charData.class1TotalRunes = {};
+        RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
     }
     
-    if (!playerJsonData.inventory) {
-        playerJsonData.inventory = [];
+    if (!charData.inventory) {
+        charData.inventory = [];
     }
     
-    state.regularStars = playerJsonData.class1RegularStars;
-    state.bigStars = playerJsonData.class1BigStars;
-    state.giantStars = playerJsonData.class1GiantStars;
+    state.regularStars = charData.class1RegularStars;
+    state.bigStars = charData.class1BigStars;
+    state.giantStars = charData.class1GiantStars;
 }
 
 async function saveDriveData() {
     if (!dataFileId) return;
-    playerJsonData.class1Exp = Math.floor(playerJsonData.class1Points / POINTS_PER_EXP);
-    if (playerJsonData.class1Exp > 100) playerJsonData.class1Exp = 100;
+    charData.class1Exp = Math.floor(charData.class1Points / POINTS_PER_EXP);
+    if (charData.class1Exp > 100) charData.class1Exp = 100;
     
-    playerJsonData.class1RegularStars = state.regularStars;
-    playerJsonData.class1BigStars = state.bigStars;
-    playerJsonData.class1GiantStars = state.giantStars;
+    charData.class1RegularStars = state.regularStars;
+    charData.class1BigStars = state.bigStars;
+    charData.class1GiantStars = state.giantStars;
     
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
         method: 'PATCH',
@@ -146,25 +154,27 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// NAVIGATION BUTTONS
+// NAVIGATION BUTTONS (ADDED COMPLETION SIGNALS)
 document.getElementById("returnHubBtn").addEventListener("click", () => {
-    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
+    const isComplete = charData.schoolProgress && charData.schoolProgress.class1;
+    window.location.href = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
 });
 
 document.getElementById("hubRedirectBtn").addEventListener("click", () => {
-    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
+    const isComplete = charData.schoolProgress && charData.schoolProgress.class1;
+    window.location.href = isComplete ? "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true" : "https://adequateremedy.github.io/RPG-Hub/";
 });
 
 document.getElementById("restartClassBtn").addEventListener("click", async () => {
     const confirmRestart = confirm("Are you sure you want to restart Class 1? All progress and points will be erased.");
     if (confirmRestart) {
-        playerJsonData.class1Points = 0;
-        playerJsonData.class1Round = 1;
-        playerJsonData.class1Exp = 0;
-        playerJsonData.class1RegularStars = 0;
-        playerJsonData.class1BigStars = 0;
-        playerJsonData.class1GiantStars = 0;
-        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
+        charData.class1Points = 0;
+        charData.class1Round = 1;
+        charData.class1Exp = 0;
+        charData.class1RegularStars = 0;
+        charData.class1BigStars = 0;
+        charData.class1GiantStars = 0;
+        RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
         state.regularStars = 0;
         state.bigStars = 0;
         state.giantStars = 0;
@@ -193,13 +203,13 @@ document.getElementById("continueClassBtn").addEventListener("click", () => {
 document.getElementById("retakeGraduateBtn").addEventListener("click", async () => {
     const confirmRetake = confirm("Are you sure you want to retake the class? This will erase your 2,000 points and return you to Round 1.");
     if (confirmRetake) {
-        playerJsonData.class1Points = 0;
-        playerJsonData.class1Round = 1;
-        playerJsonData.class1Exp = 0;
-        playerJsonData.class1RegularStars = 0;
-        playerJsonData.class1BigStars = 0;
-        playerJsonData.class1GiantStars = 0;
-        RUNE_NAMES.forEach(n => playerJsonData.class1TotalRunes[n] = 0);
+        charData.class1Points = 0;
+        charData.class1Round = 1;
+        charData.class1Exp = 0;
+        charData.class1RegularStars = 0;
+        charData.class1BigStars = 0;
+        charData.class1GiantStars = 0;
+        RUNE_NAMES.forEach(n => charData.class1TotalRunes[n] = 0);
         state.regularStars = 0;
         state.bigStars = 0;
         state.giantStars = 0;
@@ -217,12 +227,12 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
     switchScreen('loading');
     
     // Check if they already received the Class 1 EXP to prevent stacking
-    if (!playerJsonData.class1ExpAwarded) {
-        playerJsonData.exp = (playerJsonData.exp || 0) + 100;
-        playerJsonData.class1ExpAwarded = true;
+    if (!charData.class1ExpAwarded) {
+        charData.exp = (charData.exp || 0) + 100;
+        charData.class1ExpAwarded = true;
     }
     
-    playerJsonData.schoolProgress.class1 = true;
+    charData.schoolProgress.class1 = true;
     
     try {
         // Fetch Normal Image
@@ -238,13 +248,13 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
         const glowFileId = await uploadImageToDrive(glowFile);
         
         // Wipe existing Runic Stones to prevent inventory duplicates
-        if (playerJsonData.inventory) {
-            playerJsonData.inventory = playerJsonData.inventory.filter(item => item.category !== "Runic Stone");
+        if (charData.inventory) {
+            charData.inventory = charData.inventory.filter(item => item.category !== "Runic Stone");
         } else {
-            playerJsonData.inventory = [];
+            charData.inventory = [];
         }
         
-        playerJsonData.inventory.push({
+        charData.inventory.push({
             name: `${state.winningRune} Stone`,
             category: "Runic Stone",
             imageId: fileId,
@@ -256,7 +266,7 @@ document.getElementById("saveGraduateBtn").addEventListener("click", async () =>
     }
 
     await saveDriveData();
-    window.location.href = "https://adequateremedy.github.io/RPG-Hub/";
+    window.location.href = "https://adequateremedy.github.io/RPG-Hub/?class1Complete=true";
 });
 
 // ==========================================
@@ -376,10 +386,10 @@ function initAssetLoading() {
 function showWelcomeScreen() {
     switchScreen('welcome');
     
-    if (playerJsonData.class1Points > 0) {
+    if (charData.class1Points > 0) {
         document.getElementById('newPlayerPanel').classList.add('hidden');
         document.getElementById('returningPlayerPanel').classList.remove('hidden');
-        const result = calculateGrade(playerJsonData.class1Points);
+        const result = calculateGrade(charData.class1Points);
         document.getElementById("welcomeGrade").innerText = result.grade;
         document.getElementById("welcomePercent").innerText = result.percent;
         const gradeColor = result.grade === "A" ? "#4caf50" : 
@@ -411,7 +421,7 @@ function resizeCanvas() {
 
 function getActiveRuneTypes() {
     const typesPerRound = [4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 9];
-    const index = Math.min(playerJsonData.class1Round - 1, typesPerRound.length - 1);
+    const index = Math.min(charData.class1Round - 1, typesPerRound.length - 1);
     let numTypes = typesPerRound[index];
     return RUNE_NAMES.slice(0, numTypes);
 }
@@ -466,10 +476,10 @@ function dfs(r, c, type, visited, depth) {
 }
 
 function updateUI() {
-    document.getElementById("uiRound").innerText = playerJsonData.class1Round;
+    document.getElementById("uiRound").innerText = charData.class1Round;
     document.getElementById("uiScore").innerText = state.roundScore;
     document.getElementById("uiTime").innerText = state.timeLeft;
-    document.getElementById("uiTotalPoints").innerText = `${playerJsonData.class1Points} / ${MAX_POINTS}`;
+    document.getElementById("uiTotalPoints").innerText = `${charData.class1Points} / ${MAX_POINTS}`;
     
     document.getElementById("countReg").innerText = state.regularStars;
     document.getElementById("countBig").innerText = state.bigStars;
@@ -532,8 +542,8 @@ function triggerGraduation() {
     let highestRune = RUNE_NAMES[0];
     let maxCount = -1;
     RUNE_NAMES.forEach(rune => {
-        if (playerJsonData.class1TotalRunes[rune] > maxCount) {
-            maxCount = playerJsonData.class1TotalRunes[rune];
+        if (charData.class1TotalRunes[rune] > maxCount) {
+            maxCount = charData.class1TotalRunes[rune];
             highestRune = rune;
         }
     });
@@ -546,7 +556,7 @@ function triggerGraduation() {
 }
 
 function startRound() {
-    if(playerJsonData.class1Points >= MAX_POINTS) {
+    if(charData.class1Points >= MAX_POINTS) {
         triggerGraduation();
         return;
     }
@@ -595,18 +605,18 @@ function endRound() {
     clearInterval(timerInterval);
     pauseBGM();
     
-    playerJsonData.class1Points += state.roundScore;
-    playerJsonData.class1Round++;
+    charData.class1Points += state.roundScore;
+    charData.class1Round++;
     
     Object.keys(state.collectedRunes).forEach(rune => {
-        playerJsonData.class1TotalRunes[rune] += state.collectedRunes[rune];
+        charData.class1TotalRunes[rune] += state.collectedRunes[rune];
     });
     
     saveDriveData(); 
 
-    const result = calculateGrade(playerJsonData.class1Points);
+    const result = calculateGrade(charData.class1Points);
 
-    document.getElementById("tallyRoundNumber").innerText = playerJsonData.class1Round - 1;
+    document.getElementById("tallyRoundNumber").innerText = charData.class1Round - 1;
     document.getElementById("tallyScore").innerText = state.roundScore;
     document.getElementById("tallyGrade").innerText = result.grade;
     document.getElementById("tallyPercent").innerText = result.percent;
@@ -632,7 +642,7 @@ function endRound() {
         }
     });
 
-    if(playerJsonData.class1Points >= MAX_POINTS) {
+    if(charData.class1Points >= MAX_POINTS) {
         triggerGraduation();
     } else {
         screens.tally.classList.remove('hidden');
